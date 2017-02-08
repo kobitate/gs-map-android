@@ -6,7 +6,11 @@ import android.support.annotation.RequiresApi;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.util.ArrayMap;
+import android.support.v7.widget.CardView;
 import android.util.Log;
+import android.view.View;
+import android.widget.TextView;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -23,19 +27,27 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
+import java.util.Map;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
 	private GoogleMap mMap;
+	private JSONObject buildings;
+	private ArrayMap<String, JSONObject> polygons;
+
+	Polygon lastPolygon = null;
 
 	private final double 	START_LAT 	=  32.421205;
 	private final double 	START_LNG 	= -81.782044;
 	private final float 	START_ZOOM 	=  14.0f;
 
-	private final int 		POLYGON_ALPHA 			= 77;
-	private final float 	POLYGON_STROKE_WIDTH 	= 3.0f;
+	private final int 		POLYGON_ALPHA 					= 77;
+	private final float 	POLYGON_STROKE_WIDTH 			= 3.0f;
+	private final float 	POLYGON_STROKE_WIDTH_SELECTED 	= 6.0f;
 
-	private JSONObject buildings;
+	private TextView 		infoTitle;
+	private TextView		infoBuildingNumber;
+	private CardView		infoCard;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +57,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
 				.findFragmentById(R.id.map);
 		mapFragment.getMapAsync(this);
+
+		infoTitle = (TextView) findViewById(R.id.infoTitle);
+		infoBuildingNumber = (TextView) findViewById(R.id.infoBuildingNumber);
+		infoCard = (CardView) findViewById(R.id.infoCard);
+
+		polygons = new ArrayMap<>();
 	}
 
 	@Override
@@ -144,14 +162,36 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			polygonOptions.strokeWidth(POLYGON_STROKE_WIDTH);
 			polygonOptions.clickable(true);
 
-			mMap.addPolygon(polygonOptions);
+			Polygon polygon = mMap.addPolygon(polygonOptions);
 
+			polygons.put(polygon.getId(), b);
 
 		}
 
 		mMap.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
 			@Override
 			public void onPolygonClick(Polygon polygon) {
+				if (infoCard.getVisibility() == View.GONE) {
+					infoCard.setVisibility(View.VISIBLE);
+					infoCard.setAlpha(1.0f);
+
+				}
+
+				polygon.setStrokeWidth(POLYGON_STROKE_WIDTH_SELECTED);
+				if (lastPolygon != null) {
+					lastPolygon.setStrokeWidth(POLYGON_STROKE_WIDTH);
+				}
+
+				lastPolygon = polygon;
+
+				try {
+					JSONObject p = polygons.get(polygon.getId());
+					infoTitle.setText(p.getString("name_popup"));
+					// @TODO Do the string like you're supposed to
+					infoBuildingNumber.setText("Building #" + p.getString("bldg_number"));
+				} catch (JSONException e) {
+					e.printStackTrace();
+				}
 
 			}
 		});

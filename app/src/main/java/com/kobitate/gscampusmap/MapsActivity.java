@@ -12,6 +12,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
+import com.flipboard.bottomsheet.BottomSheetLayout;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -37,17 +38,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 	Polygon lastPolygon = null;
 
-	private final double 	START_LAT 	=  32.421205;
-	private final double 	START_LNG 	= -81.782044;
-	private final float 	START_ZOOM 	=  14.0f;
+	private final double 		START_LAT 	=  32.421205;
+	private final double 		START_LNG 	= -81.782044;
+	private final float 		START_ZOOM 	=  14.0f;
 
-	private final int 		POLYGON_ALPHA 					= 77;
-	private final float 	POLYGON_STROKE_WIDTH 			= 3.0f;
-	private final float 	POLYGON_STROKE_WIDTH_SELECTED 	= 6.0f;
+	private final int 			POLYGON_ALPHA 					= 77;
+	private final float 		POLYGON_STROKE_WIDTH 			= 3.0f;
+	private final float 		POLYGON_STROKE_WIDTH_SELECTED 	= 6.0f;
 
-	private TextView 		infoTitle;
-	private TextView		infoBuildingNumber;
-	private CardView		infoCard;
+	private TextView 			infoTitle;
+	private TextView			infoBuildingNumber;
+	private BottomSheetLayout	infoCard;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -58,9 +59,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				.findFragmentById(R.id.map);
 		mapFragment.getMapAsync(this);
 
-		infoTitle = (TextView) findViewById(R.id.infoTitle);
-		infoBuildingNumber = (TextView) findViewById(R.id.infoBuildingNumber);
-		infoCard = (CardView) findViewById(R.id.infoCard);
+		infoCard = (BottomSheetLayout) findViewById(R.id.infoCard);
+		infoCard.setShouldDimContentView(false);
+		infoCard.setInterceptContentTouch(false);
 
 		polygons = new ArrayMap<>();
 	}
@@ -171,14 +172,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		mMap.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
 			@Override
 			public void onPolygonClick(Polygon polygon) {
-				if (infoCard.getVisibility() == View.GONE) {
-					infoCard.setVisibility(View.VISIBLE);
-					infoCard.setAlpha(1.0f);
-
-				}
 
 				polygon.setStrokeWidth(POLYGON_STROKE_WIDTH_SELECTED);
-				if (lastPolygon != null) {
+				if (lastPolygon != null && lastPolygon != polygon) {
 					lastPolygon.setStrokeWidth(POLYGON_STROKE_WIDTH);
 				}
 
@@ -186,9 +182,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 				try {
 					JSONObject p = polygons.get(polygon.getId());
+
+					if (infoTitle == null) {
+						infoCard.showWithSheetView(getLayoutInflater().inflate(R.layout.building_info, infoCard, false));
+					}
+					else if (!infoCard.isSheetShowing()){
+						infoCard.peekSheet();
+					}
+
+					infoTitle = (TextView) infoCard.findViewById(R.id.infoTitle);
+					infoBuildingNumber = (TextView) infoCard.findViewById(R.id.infoBuildingNumber);
+
 					infoTitle.setText(p.getString("name_popup"));
 					// @TODO Do the string like you're supposed to
 					infoBuildingNumber.setText("Building #" + p.getString("bldg_number"));
+
 				} catch (JSONException e) {
 					e.printStackTrace();
 				}
@@ -199,13 +207,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
 			@Override
 			public void onMapClick(LatLng latLng) {
-				if (infoCard.getVisibility() == View.VISIBLE) {
-					infoCard.setVisibility(View.GONE);
-					infoCard.setAlpha(0.0f);
-				}
 				if (lastPolygon != null) {
 					lastPolygon.setStrokeWidth(POLYGON_STROKE_WIDTH);
 				}
+				infoCard.dismissSheet();
+				infoTitle = null;
+				infoBuildingNumber = null;
 			}
 		});
 	}

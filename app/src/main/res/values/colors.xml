@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#1F426E</color>
+    <color name="colorPrimaryDark">#173354</color>
+    <color name="colorAccent">#007AAB</color>
+    <color name="colorAccent2">#B8A373</color>
+
+    <color name="mapAcademic">#4097DB</color>
+    <color name="mapAdmin">#CE5055</color>
+    <color name="mapAthletics">#62A044</color>
+    <color name="mapResidential">#EA8651</color>
+    <color name="mapStudent">#C2B63C</color>
+    <color name="mapSupport">#BE8AE2</color>
+</resources>

@@ -195,6 +195,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 			}
 		});
+
+		mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
+			@Override
+			public void onMapClick(LatLng latLng) {
+				if (infoCard.getVisibility() == View.VISIBLE) {
+					infoCard.setVisibility(View.GONE);
+					infoCard.setAlpha(0.0f);
+				}
+				if (lastPolygon != null) {
+					lastPolygon.setStrokeWidth(POLYGON_STROKE_WIDTH);
+				}
+			}
+		});
 	}
 
 	public int alpha(int color, int alpha) {

@@ -62,6 +62,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private CardView infoType;
 	private AppCompatImageView infoTypeIcon;
 
+	private CardView searchCard;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -71,6 +73,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		setupInfoCard();
 
 		polygons = new ArrayMap<>();
+
+		searchCard = (CardView) findViewById(R.id.searchCard);
 	}
 
 	private void setupMap() {
@@ -105,6 +109,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 		LatLng startPos = new LatLng(START_LAT, START_LNG);
 		mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(startPos, START_ZOOM));
+		mMap.setPadding(16, 200, 16, 0);
 
 		buildings = parseBuildings();
 
@@ -125,7 +130,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	// Function from Stack Overflow, CC BY-SA 3.0
 	// Source: http://stackoverflow.com/a/19945484/1465353
 	private JSONObject parseBuildings() {
-		String json = null;
+		String json;
 		try {
 			InputStream in = getAssets().open("buildings.json");
 			int size = in.available();

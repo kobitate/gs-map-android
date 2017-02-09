@@ -1,24 +1,30 @@
 package com.kobitate.gscampusmap;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Build;
-import android.support.annotation.RequiresApi;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.util.ArrayMap;
+import android.support.v7.widget.AppCompatImageView;
 import android.support.v7.widget.CardView;
+import android.text.Html;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.flipboard.bottomsheet.BottomSheetLayout;
+import com.flipboard.bottomsheet.OnSheetDismissedListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
 
@@ -28,7 +34,6 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
-import java.util.Map;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -38,32 +43,60 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 	Polygon lastPolygon = null;
 
-	private final double 		START_LAT 	=  32.421205;
-	private final double 		START_LNG 	= -81.782044;
-	private final float 		START_ZOOM 	=  14.0f;
+	private final double START_LAT = 32.421205;
+	private final double START_LNG = -81.782044;
+	private final float START_ZOOM = 14.0f;
 
-	private final int 			POLYGON_ALPHA 					= 77;
-	private final float 		POLYGON_STROKE_WIDTH 			= 3.0f;
-	private final float 		POLYGON_STROKE_WIDTH_SELECTED 	= 6.0f;
+	private final int POLYGON_ALPHA = 77;
+	private final float POLYGON_STROKE_WIDTH = 3.0f;
+	private final float POLYGON_STROKE_WIDTH_SELECTED = 6.0f;
 
-	private TextView 			infoTitle;
-	private TextView			infoBuildingNumber;
-	private BottomSheetLayout	infoCard;
+	private final int REQUEST_LOCATION_PERMISSION = 0;
+
+	private TextView infoTitle;
+	private TextView infoBuildingNumber;
+	private BottomSheetLayout infoCard;
+	private TextView infoAddress;
+	private TextView infoDetails;
+	private TextView infoTypeText;
+	private CardView infoType;
+	private AppCompatImageView infoTypeIcon;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_maps);
+
+		setupMap();
+		setupInfoCard();
+
+		polygons = new ArrayMap<>();
+	}
+
+	private void setupMap() {
 		// Obtain the SupportMapFragment and get notified when the map is ready to be used.
 		SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
 				.findFragmentById(R.id.map);
 		mapFragment.getMapAsync(this);
+	}
+
+	private void setupInfoCard() {
 
 		infoCard = (BottomSheetLayout) findViewById(R.id.infoCard);
 		infoCard.setShouldDimContentView(false);
 		infoCard.setInterceptContentTouch(false);
+		infoCard.setPeekSheetTranslation(300);
 
-		polygons = new ArrayMap<>();
+		infoCard.addOnSheetDismissedListener(new OnSheetDismissedListener() {
+			@Override
+			public void onDismissed(BottomSheetLayout bottomSheetLayout) {
+				infoTitle = null;
+				infoBuildingNumber = null;
+				if (lastPolygon != null) {
+					lastPolygon.setStrokeWidth(POLYGON_STROKE_WIDTH);
+				}
+			}
+		});
 	}
 
 	@Override
@@ -81,6 +114,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			Log.e(getString(R.string.app_name), "Error adding buildings");
 			e.printStackTrace();
 		}
+
+		if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+			ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_LOCATION_PERMISSION);
+			return;
+		}
+		mMap.setMyLocationEnabled(true);
 	}
 
 	// Function from Stack Overflow, CC BY-SA 3.0
@@ -186,16 +225,81 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 					if (infoTitle == null) {
 						infoCard.showWithSheetView(getLayoutInflater().inflate(R.layout.building_info, infoCard, false));
 					}
-					else if (!infoCard.isSheetShowing()){
+					else {
 						infoCard.peekSheet();
 					}
 
-					infoTitle = (TextView) infoCard.findViewById(R.id.infoTitle);
-					infoBuildingNumber = (TextView) infoCard.findViewById(R.id.infoBuildingNumber);
+					infoTitle = 			(TextView) infoCard.findViewById(R.id.infoTitle);
+					infoBuildingNumber = 	(TextView) infoCard.findViewById(R.id.infoBuildingNumber);
+					infoAddress = 			(TextView) infoCard.findViewById(R.id.infoAddress);
+					infoDetails = 			(TextView) infoCard.findViewById(R.id.infoDetails);
+					infoTypeText = 			(TextView) infoCard.findViewById(R.id.infoTypeText);
+					infoType =				(CardView) infoCard.findViewById(R.id.infoType);
+					infoTypeIcon = 			(AppCompatImageView) infoCard.findViewById(R.id.infoTypeIcon);
 
-					infoTitle.setText(p.getString("name_popup"));
+					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+						infoTitle.setText(Html.fromHtml(p.getString("name_popup"), Html.FROM_HTML_MODE_LEGACY));
+						if (p.getString("bldg_details") == null || p.getString("bldg_details").equals("null")) {
+							infoDetails.setText("");
+						}
+						else {
+							infoDetails.setText(Html.fromHtml(p.getString("bldg_details"), Html.FROM_HTML_MODE_LEGACY));
+						}
+					}
+					else {
+						infoTitle.setText(Html.fromHtml(p.getString("name_popup")));
+						if (p.getString("bldg_details") == null) {
+							infoDetails.setText("");
+						}
+						else {
+							infoDetails.setText(Html.fromHtml(p.getString("bldg_details")));
+						}
+					}
+
 					// @TODO Do the string like you're supposed to
-					infoBuildingNumber.setText("Building #" + p.getString("bldg_number"));
+					if (p.getString("bldg_number") == null || p.getString("bldg_number").equals("null")) {
+						infoBuildingNumber.setText("");
+					}
+					else {
+						infoBuildingNumber.setText("Building #" + p.getString("bldg_number"));
+
+					}
+					infoAddress.setText(p.getString("loc_address"));
+
+					switch (p.getString("polygon_type")) {
+						case "academic":
+							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapAcademic));
+							infoTypeIcon.setImageResource(R.drawable.academic);
+							infoTypeText.setText("Academic");
+							break;
+						case "admin":
+							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapAdmin));
+							infoTypeIcon.setImageResource(R.drawable.admin);
+							infoTypeText.setText("Admin");
+							break;
+						case "athletics":
+							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapAthletics));
+							infoTypeIcon.setImageResource(R.drawable.athletics);
+							infoTypeText.setText("Athletics");
+							break;
+						case "residential":
+							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapResidential));
+							infoTypeIcon.setImageResource(R.drawable.residential);
+							infoTypeText.setText("Residence Halls");
+							break;
+						case "student":
+							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapStudent));
+							infoTypeIcon.setImageResource(R.drawable.student);
+							infoTypeText.setText("Student Services");
+							break;
+						case "support":
+							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapSupport));
+							infoTypeIcon.setImageResource(R.drawable.support);
+							infoTypeText.setText("Support Facilities");
+							break;
+						default:
+							infoType.setVisibility(View.GONE);
+					}
 
 				} catch (JSONException e) {
 					e.printStackTrace();
@@ -207,17 +311,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
 			@Override
 			public void onMapClick(LatLng latLng) {
-				if (lastPolygon != null) {
-					lastPolygon.setStrokeWidth(POLYGON_STROKE_WIDTH);
-				}
 				infoCard.dismissSheet();
-				infoTitle = null;
-				infoBuildingNumber = null;
 			}
 		});
 	}
 
-	public int alpha(int color, int alpha) {
+	@Override
+	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+		if (requestCode == REQUEST_LOCATION_PERMISSION) {
+			if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+				mMap.setMyLocationEnabled(true);
+				Toast.makeText(this, "Location Permission Granted", Toast.LENGTH_SHORT).show();
+			}
+		}
+	}
+
+	private int alpha(int color, int alpha) {
 		color = ContextCompat.getColor(getApplicationContext(), color);
 		int red = Color.red(color);
 		int blue = Color.blue(color);

@@ -12,9 +12,11 @@ import android.support.v4.content.ContextCompat;
 import android.support.v4.util.ArrayMap;
 import android.support.v7.widget.AppCompatImageView;
 import android.support.v7.widget.CardView;
+import android.support.v7.widget.Toolbar;
 import android.text.Html;
 import android.util.Log;
 import android.view.View;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -61,6 +63,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private TextView infoTypeText;
 	private CardView infoType;
 	private AppCompatImageView infoTypeIcon;
+	private RelativeLayout mapOuter;
 
 	private CardView searchCard;
 
@@ -75,6 +78,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		polygons = new ArrayMap<>();
 
 		searchCard = (CardView) findViewById(R.id.searchCard);
+
+		mapOuter = (RelativeLayout) findViewById(R.id.mapOuter);
+		mapOuter.setPadding(0, getStatusBarHeight(), 0, 0);
+
+
 	}
 
 	private void setupMap() {
@@ -337,6 +345,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		int blue = Color.blue(color);
 		int green = Color.green(color);
 		return Color.argb(alpha, red, green, blue);
+	}
+
+	public int getStatusBarHeight() {
+		int result = 0;
+		int resourceId = getResources().getIdentifier("status_bar_height", "dimen", "android");
+		if (resourceId > 0) {
+			result = getResources().getDimensionPixelSize(resourceId);
+		}
+		return result;
 	}
 
 }

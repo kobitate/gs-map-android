@@ -286,7 +286,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 						infoBuildingNumber.setText("");
 					}
 					else {
-						infoBuildingNumber.setText("Building #" + p.getString("bldg_number"));
+						String buildingNumberString = String.format(res.getString(R.string.building_number), p.getString("bldg_number"));
+						infoBuildingNumber.setText(buildingNumberString);
 
 					}
 					infoAddress.setText(p.getString("loc_address"));
@@ -295,32 +296,32 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 						case "academic":
 							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapAcademic));
 							infoTypeIcon.setImageResource(R.drawable.academic);
-							infoTypeText.setText("Academic");
+							infoTypeText.setText(res.getString(R.string.building_type_academic));
 							break;
 						case "admin":
 							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapAdmin));
 							infoTypeIcon.setImageResource(R.drawable.admin);
-							infoTypeText.setText("Admin");
+							infoTypeText.setText(res.getString(R.string.building_type_admin));
 							break;
 						case "athletics":
 							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapAthletics));
 							infoTypeIcon.setImageResource(R.drawable.athletics);
-							infoTypeText.setText("Athletics");
+							infoTypeText.setText(res.getString(R.string.building_type_athletics));
 							break;
 						case "residential":
 							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapResidential));
 							infoTypeIcon.setImageResource(R.drawable.residential);
-							infoTypeText.setText("Residence Halls");
+							infoTypeText.setText(res.getString(R.string.building_type_residential));
 							break;
 						case "student":
 							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapStudent));
 							infoTypeIcon.setImageResource(R.drawable.student);
-							infoTypeText.setText("Student Services");
+							infoTypeText.setText(res.getString(R.string.building_type_student));
 							break;
 						case "support":
 							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapSupport));
 							infoTypeIcon.setImageResource(R.drawable.support);
-							infoTypeText.setText("Support Facilities");
+							infoTypeText.setText(res.getString(R.string.building_type_support));
 							break;
 						default:
 							infoType.setVisibility(View.GONE);

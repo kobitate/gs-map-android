@@ -1,4 +1,16 @@
 <resources>
     <string name="app_name">GS Campus Map</string>
     <string name="title_activity_maps">Map</string>
+
+    <string name="search_placeholder">Search Map</string>
+
+    <string name="building_type_academic">Academic Buildings</string>
+    <string name="building_type_admin">Administrative Offices</string>
+    <string name="building_type_athletics">Athletics and Recreation</string>
+    <string name="building_type_residential">Residence Halls</string>
+    <string name="building_type_student">Student Services</string>
+    <string name="building_type_support">Support Facilities</string>
+
+    <string name="building_number">Building #%1$s</string>
+
 </resources>

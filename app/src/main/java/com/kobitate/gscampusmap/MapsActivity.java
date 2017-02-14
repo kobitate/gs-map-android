@@ -1,7 +1,9 @@
 package com.kobitate.gscampusmap;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.graphics.Color;
 import android.os.Build;
 import android.support.annotation.NonNull;
@@ -12,11 +14,12 @@ import android.support.v4.content.ContextCompat;
 import android.support.v4.util.ArrayMap;
 import android.support.v7.widget.AppCompatImageView;
 import android.support.v7.widget.CardView;
-import android.support.v7.widget.Toolbar;
 import android.text.Html;
 import android.util.Log;
 import android.view.View;
-import android.widget.RelativeLayout;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -63,9 +66,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private TextView infoTypeText;
 	private CardView infoType;
 	private AppCompatImageView infoTypeIcon;
-	private RelativeLayout mapOuter;
 
 	private CardView searchCard;
+	private LinearLayout searchOuter;
+	private EditText searchBox;
+
+	private Resources res;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -78,9 +84,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		polygons = new ArrayMap<>();
 
 		searchCard = (CardView) findViewById(R.id.searchCard);
+		searchOuter = (LinearLayout) findViewById(R.id.searchOuter);
+		searchBox = (EditText) findViewById(R.id.searchBox);
 
-		mapOuter = (RelativeLayout) findViewById(R.id.mapOuter);
-		mapOuter.setPadding(0, getStatusBarHeight(), 0, 0);
+		searchOuter.setPadding(0, getStatusBarHeight(), 0, 0);
+		searchBox.setHint(R.string.search_placeholder);
+
+		res = getResources();
 
 
 	}
@@ -117,7 +127,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 		LatLng startPos = new LatLng(START_LAT, START_LNG);
 		mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(startPos, START_ZOOM));
-		mMap.setPadding(16, 200, 16, 0);
+		mMap.setPadding(0, searchOuter.getMeasuredHeight() - 32, 0, 0);
 
 		buildings = parseBuildings();
 
@@ -225,6 +235,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			@Override
 			public void onPolygonClick(Polygon polygon) {
 
+				clearSearchFocus();
+
 				polygon.setStrokeWidth(POLYGON_STROKE_WIDTH_SELECTED);
 				if (lastPolygon != null && lastPolygon != polygon) {
 					lastPolygon.setStrokeWidth(POLYGON_STROKE_WIDTH);
@@ -325,6 +337,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			@Override
 			public void onMapClick(LatLng latLng) {
 				infoCard.dismissSheet();
+				clearSearchFocus();
 			}
 		});
 	}
@@ -347,7 +360,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		return Color.argb(alpha, red, green, blue);
 	}
 
-	public int getStatusBarHeight() {
+	private int getStatusBarHeight() {
 		int result = 0;
 		int resourceId = getResources().getIdentifier("status_bar_height", "dimen", "android");
 		if (resourceId > 0) {
@@ -355,5 +368,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		}
 		return result;
 	}
+
+	private void clearSearchFocus() {
+		searchBox.clearFocus();
+		InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+		imm.hideSoftInputFromWindow(searchBox.getWindowToken(), 0);
+	}
+
+
 
 }

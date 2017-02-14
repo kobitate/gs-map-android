@@ -42,7 +42,7 @@
 
                 <android.support.v7.widget.AppCompatImageView
                     android:layout_height="wrap_content"
-                    map:srcCompat="@drawable/menu"
+                    map:srcCompat="@drawable/places_ic_search"
                     android:id="@+id/imageView"
                     android:layout_weight="1"
                     android:layout_width="64dp"

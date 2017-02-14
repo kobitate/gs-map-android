@@ -238,7 +238,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				clearSearchFocus();
 
 				polygon.setStrokeWidth(POLYGON_STROKE_WIDTH_SELECTED);
-				if (lastPolygon != null && lastPolygon != polygon) {
+				if (lastPolygon != null && !lastPolygon.equals(polygon)) {
 					lastPolygon.setStrokeWidth(POLYGON_STROKE_WIDTH);
 				}
 

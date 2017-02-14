@@ -1,7 +1,9 @@
 package com.kobitate.gscampusmap;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.graphics.Color;
 import android.os.Build;
 import android.support.annotation.NonNull;
@@ -15,6 +17,9 @@ import android.support.v7.widget.CardView;
 import android.text.Html;
 import android.util.Log;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -62,6 +67,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private CardView infoType;
 	private AppCompatImageView infoTypeIcon;
 
+	private CardView searchCard;
+	private LinearLayout searchOuter;
+	private EditText searchBox;
+
+	private Resources res;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -71,6 +82,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		setupInfoCard();
 
 		polygons = new ArrayMap<>();
+
+		searchCard = (CardView) findViewById(R.id.searchCard);
+		searchOuter = (LinearLayout) findViewById(R.id.searchOuter);
+		searchBox = (EditText) findViewById(R.id.searchBox);
+
+		searchOuter.setPadding(0, getStatusBarHeight(), 0, 0);
+		searchBox.setHint(R.string.search_placeholder);
+
+		res = getResources();
+
+
 	}
 
 	private void setupMap() {
@@ -105,6 +127,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 		LatLng startPos = new LatLng(START_LAT, START_LNG);
 		mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(startPos, START_ZOOM));
+		mMap.setPadding(0, searchOuter.getMeasuredHeight() - 32, 0, 0);
 
 		buildings = parseBuildings();
 
@@ -125,7 +148,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	// Function from Stack Overflow, CC BY-SA 3.0
 	// Source: http://stackoverflow.com/a/19945484/1465353
 	private JSONObject parseBuildings() {
-		String json = null;
+		String json;
 		try {
 			InputStream in = getAssets().open("buildings.json");
 			int size = in.available();
@@ -212,8 +235,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			@Override
 			public void onPolygonClick(Polygon polygon) {
 
+				clearSearchFocus();
+
 				polygon.setStrokeWidth(POLYGON_STROKE_WIDTH_SELECTED);
-				if (lastPolygon != null && lastPolygon != polygon) {
+				if (lastPolygon != null && !lastPolygon.equals(polygon)) {
 					lastPolygon.setStrokeWidth(POLYGON_STROKE_WIDTH);
 				}
 
@@ -261,7 +286,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 						infoBuildingNumber.setText("");
 					}
 					else {
-						infoBuildingNumber.setText("Building #" + p.getString("bldg_number"));
+						String buildingNumberString = String.format(res.getString(R.string.building_number), p.getString("bldg_number"));
+						infoBuildingNumber.setText(buildingNumberString);
 
 					}
 					infoAddress.setText(p.getString("loc_address"));
@@ -270,32 +296,32 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 						case "academic":
 							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapAcademic));
 							infoTypeIcon.setImageResource(R.drawable.academic);
-							infoTypeText.setText("Academic");
+							infoTypeText.setText(res.getString(R.string.building_type_academic));
 							break;
 						case "admin":
 							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapAdmin));
 							infoTypeIcon.setImageResource(R.drawable.admin);
-							infoTypeText.setText("Admin");
+							infoTypeText.setText(res.getString(R.string.building_type_admin));
 							break;
 						case "athletics":
 							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapAthletics));
 							infoTypeIcon.setImageResource(R.drawable.athletics);
-							infoTypeText.setText("Athletics");
+							infoTypeText.setText(res.getString(R.string.building_type_athletics));
 							break;
 						case "residential":
 							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapResidential));
 							infoTypeIcon.setImageResource(R.drawable.residential);
-							infoTypeText.setText("Residence Halls");
+							infoTypeText.setText(res.getString(R.string.building_type_residential));
 							break;
 						case "student":
 							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapStudent));
 							infoTypeIcon.setImageResource(R.drawable.student);
-							infoTypeText.setText("Student Services");
+							infoTypeText.setText(res.getString(R.string.building_type_student));
 							break;
 						case "support":
 							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapSupport));
 							infoTypeIcon.setImageResource(R.drawable.support);
-							infoTypeText.setText("Support Facilities");
+							infoTypeText.setText(res.getString(R.string.building_type_support));
 							break;
 						default:
 							infoType.setVisibility(View.GONE);
@@ -312,6 +338,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			@Override
 			public void onMapClick(LatLng latLng) {
 				infoCard.dismissSheet();
+				clearSearchFocus();
 			}
 		});
 	}
@@ -333,5 +360,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		int green = Color.green(color);
 		return Color.argb(alpha, red, green, blue);
 	}
+
+	private int getStatusBarHeight() {
+		int result = 0;
+		int resourceId = getResources().getIdentifier("status_bar_height", "dimen", "android");
+		if (resourceId > 0) {
+			result = getResources().getDimensionPixelSize(resourceId);
+		}
+		return result;
+	}
+
+	private void clearSearchFocus() {
+		searchBox.clearFocus();
+		InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+		imm.hideSoftInputFromWindow(searchBox.getWindowToken(), 0);
+	}
+
+
 
 }

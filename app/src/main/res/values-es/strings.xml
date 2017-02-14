@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GS Mapa de Campus</string>
+    <string name="building_number">Edificio no. %1$s</string>
+    <string name="building_type_academic">Edificios Académicos</string>
+    <string name="building_type_admin">Oficinas Administrativas</string>
+    <string name="building_type_athletics">Atléticos y Esparcimiento</string>
+    <string name="building_type_residential">Dormitorios</string>
+    <string name="building_type_student">Servicios Estudiantil</string>
+    <string name="building_type_support">Servicios de Apoyo</string>
+    <string name="search_placeholder">Buscar</string>
+    <string name="title_activity_maps">Mapa</string>
+</resources>

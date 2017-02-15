@@ -20,6 +20,7 @@ import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -42,36 +43,36 @@ import java.util.Iterator;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
-	private GoogleMap mMap;
-	private JSONObject buildings;
+	private GoogleMap 			mMap;
+	private JSONObject 			buildings;
 	private ArrayMap<String, JSONObject> polygons;
 
-	Polygon lastPolygon = null;
+	private final double 		START_LAT = 	32.421205;
+	private final double 		START_LNG = 	-81.782044;
+	private final float 		START_ZOOM = 	14.0f;
 
-	private final double START_LAT = 32.421205;
-	private final double START_LNG = -81.782044;
-	private final float START_ZOOM = 14.0f;
+	private final int 			POLYGON_ALPHA = 					77;
+	private final float 		POLYGON_STROKE_WIDTH = 				3.0f;
+	private final float 		POLYGON_STROKE_WIDTH_SELECTED = 	6.0f;
 
-	private final int POLYGON_ALPHA = 77;
-	private final float POLYGON_STROKE_WIDTH = 3.0f;
-	private final float POLYGON_STROKE_WIDTH_SELECTED = 6.0f;
+	private final int 			REQUEST_LOCATION_PERMISSION = 		0;
 
-	private final int REQUEST_LOCATION_PERMISSION = 0;
+	private TextView 			infoTitle;
+	private TextView 			infoBuildingNumber;
+	private BottomSheetLayout 	infoCard;
+	private TextView 			infoAddress;
+	private TextView 			infoDetails;
+	private TextView 			infoTypeText;
+	private CardView 			infoType;
+	private AppCompatImageView 	infoTypeIcon;
 
-	private TextView infoTitle;
-	private TextView infoBuildingNumber;
-	private BottomSheetLayout infoCard;
-	private TextView infoAddress;
-	private TextView infoDetails;
-	private TextView infoTypeText;
-	private CardView infoType;
-	private AppCompatImageView infoTypeIcon;
+	private CardView 			searchCard;
+	private LinearLayout 		searchOuter;
+	private EditText 			searchBox;
+	private ListView 			searchResults;
 
-	private CardView searchCard;
-	private LinearLayout searchOuter;
-	private EditText searchBox;
-
-	private Resources res;
+	private Resources 			res;
+	private Polygon 			lastPolygon = null;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -83,9 +84,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 		polygons = new ArrayMap<>();
 
-		searchCard = (CardView) findViewById(R.id.searchCard);
-		searchOuter = (LinearLayout) findViewById(R.id.searchOuter);
-		searchBox = (EditText) findViewById(R.id.searchBox);
+		searchCard = 		(CardView) 		findViewById(R.id.searchCard);
+		searchOuter = 		(LinearLayout) 	findViewById(R.id.searchOuter);
+		searchBox = 		(EditText) 		findViewById(R.id.searchBox);
+		searchResults = 	(ListView) 		findViewById(R.id.searchResults);
 
 		searchOuter.setPadding(0, getStatusBarHeight(), 0, 0);
 		searchBox.setHint(R.string.search_placeholder);
@@ -117,6 +119,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				if (lastPolygon != null) {
 					lastPolygon.setStrokeWidth(POLYGON_STROKE_WIDTH);
 				}
+
 			}
 		});
 	}
@@ -254,13 +257,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 						infoCard.peekSheet();
 					}
 
-					infoTitle = 			(TextView) infoCard.findViewById(R.id.infoTitle);
-					infoBuildingNumber = 	(TextView) infoCard.findViewById(R.id.infoBuildingNumber);
-					infoAddress = 			(TextView) infoCard.findViewById(R.id.infoAddress);
-					infoDetails = 			(TextView) infoCard.findViewById(R.id.infoDetails);
-					infoTypeText = 			(TextView) infoCard.findViewById(R.id.infoTypeText);
-					infoType =				(CardView) infoCard.findViewById(R.id.infoType);
-					infoTypeIcon = 			(AppCompatImageView) infoCard.findViewById(R.id.infoTypeIcon);
+					infoTitle = 			(TextView) 				infoCard.findViewById(R.id.infoTitle);
+					infoBuildingNumber = 	(TextView) 				infoCard.findViewById(R.id.infoBuildingNumber);
+					infoAddress = 			(TextView) 				infoCard.findViewById(R.id.infoAddress);
+					infoDetails = 			(TextView) 				infoCard.findViewById(R.id.infoDetails);
+					infoTypeText = 			(TextView) 				infoCard.findViewById(R.id.infoTypeText);
+					infoType =				(CardView) 				infoCard.findViewById(R.id.infoType);
+					infoTypeIcon = 			(AppCompatImageView) 	infoCard.findViewById(R.id.infoTypeIcon);
 
 					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
 						infoTitle.setText(Html.fromHtml(p.getString("name_popup"), Html.FROM_HTML_MODE_LEGACY));
@@ -355,9 +358,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 	private int alpha(int color, int alpha) {
 		color = ContextCompat.getColor(getApplicationContext(), color);
-		int red = Color.red(color);
-		int blue = Color.blue(color);
-		int green = Color.green(color);
+
+		int red = 		Color.red(color);
+		int blue = 		Color.blue(color);
+		int green = 	Color.green(color);
+
 		return Color.argb(alpha, red, green, blue);
 	}
 

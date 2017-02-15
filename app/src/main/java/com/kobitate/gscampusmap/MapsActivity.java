@@ -14,18 +14,27 @@ import android.support.v4.content.ContextCompat;
 import android.support.v4.util.ArrayMap;
 import android.support.v7.widget.AppCompatImageView;
 import android.support.v7.widget.CardView;
+import android.text.Editable;
 import android.text.Html;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.algolia.search.saas.AlgoliaException;
+import com.algolia.search.saas.Client;
+import com.algolia.search.saas.CompletionHandler;
+import com.algolia.search.saas.Index;
+import com.algolia.search.saas.Query;
 import com.flipboard.bottomsheet.BottomSheetLayout;
 import com.flipboard.bottomsheet.OnSheetDismissedListener;
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -34,18 +43,22 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
 	private GoogleMap 			mMap;
 	private JSONObject 			buildings;
 	private ArrayMap<String, JSONObject> polygons;
+	private ArrayMap<String, Polygon> polygonsByBuildingID;
 
 	private final double 		START_LAT = 	32.421205;
 	private final double 		START_LNG = 	-81.782044;
@@ -56,6 +69,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private final float 		POLYGON_STROKE_WIDTH_SELECTED = 	6.0f;
 
 	private final int 			REQUEST_LOCATION_PERMISSION = 		0;
+
+	private final String		ALGOLIA_APPLICATION_ID = 			"0T1K07PWTM";
+	private final String		ALGOLIA_API_KEY =					"a70c25ee5839fcc5faf31f8595a2fa59";
 
 	private TextView 			infoTitle;
 	private TextView 			infoBuildingNumber;
@@ -70,27 +86,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private LinearLayout 		searchOuter;
 	private EditText 			searchBox;
 	private ListView 			searchResults;
+	private LinearLayout 		searchResultsOuter;
+
+	private JSONObject			lastSearch;
 
 	private Resources 			res;
 	private Polygon 			lastPolygon = null;
+
+	private Client				algolia;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_maps);
 
+		algolia = new Client(ALGOLIA_APPLICATION_ID, ALGOLIA_API_KEY);
+
 		setupMap();
 		setupInfoCard();
+		setupSearch();
 
-		polygons = new ArrayMap<>();
-
-		searchCard = 		(CardView) 		findViewById(R.id.searchCard);
-		searchOuter = 		(LinearLayout) 	findViewById(R.id.searchOuter);
-		searchBox = 		(EditText) 		findViewById(R.id.searchBox);
-		searchResults = 	(ListView) 		findViewById(R.id.searchResults);
-
-		searchOuter.setPadding(0, getStatusBarHeight(), 0, 0);
-		searchBox.setHint(R.string.search_placeholder);
+		polygons = 				new ArrayMap<>();
+		polygonsByBuildingID = 	new ArrayMap<>();
 
 		res = getResources();
 
@@ -120,6 +137,85 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 					lastPolygon.setStrokeWidth(POLYGON_STROKE_WIDTH);
 				}
 
+			}
+		});
+	}
+
+	private void setupSearch() {
+		searchCard = 			(CardView) 		findViewById(R.id.searchCard);
+		searchOuter = 			(LinearLayout) 	findViewById(R.id.searchOuter);
+		searchBox = 			(EditText) 		findViewById(R.id.searchBox);
+		searchResults = 		(ListView) 		findViewById(R.id.searchResults);
+		searchResultsOuter =	(LinearLayout) 	findViewById(R.id.searchResultsOuter);
+
+		searchOuter.setPadding(0, getStatusBarHeight(), 0, 0);
+		searchBox.setHint(R.string.search_placeholder);
+
+		final Index search = algolia.getIndex("dev_campusmap");
+
+		final CompletionHandler searchCompletionHandler = new CompletionHandler() {
+			@Override
+			public void requestCompleted(JSONObject result, AlgoliaException e) {
+
+				lastSearch = result;
+
+				ArrayList<String[]> adapterResult = new ArrayList<>();
+
+				try {
+					JSONArray hits = result.getJSONArray("hits");
+					for (int i = 0; i < hits.length(); i++) {
+						JSONObject b = hits.getJSONObject(i);
+						adapterResult.add(new String[]{
+								b.getString("name")
+						});
+					}
+				} catch (JSONException e1) {
+					e1.printStackTrace();
+				}
+
+				SearchAdapter resultsAdapter = new SearchAdapter(getApplicationContext(), R.id.searchResults, adapterResult);
+				searchResults.setAdapter(resultsAdapter);
+				searchResultsOuter.setVisibility(View.VISIBLE);
+
+
+			}
+		};
+
+		searchBox.addTextChangedListener(new TextWatcher() {
+			@Override
+			public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+			}
+
+			@Override
+			public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+			}
+
+			@Override
+			public void afterTextChanged(Editable editable) {
+				String searchQuery = searchBox.getText().toString();
+				if (searchQuery.length() == 0) {
+					searchResultsOuter.setVisibility(View.GONE);
+				}
+				else {
+					search.searchAsync(new Query(searchQuery), searchCompletionHandler);
+				}
+			}
+		});
+
+		searchResults.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+			@Override
+			public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+				try {
+					JSONObject b = lastSearch.getJSONArray("hits").getJSONObject(i);
+					Polygon p = polygonsByBuildingID.get(b.getString("objectID"));
+					polygonClick(p);
+					searchResultsOuter.setVisibility(View.GONE);
+					// @TODO Pan Camera to building
+				} catch (JSONException e) {
+					e.printStackTrace();
+				}
 			}
 		});
 	}
@@ -196,8 +292,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				polygonOptions.add(new LatLng(lat, lng));
 			}
 
-			System.out.println(b.getString("polygon_type"));
-
 			switch (b.getString("polygon_type")) {
 				case "academic":
 					polygonOptions.strokeColor(ContextCompat.getColor(getApplicationContext(), R.color.mapAcademic));
@@ -231,109 +325,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			Polygon polygon = mMap.addPolygon(polygonOptions);
 
 			polygons.put(polygon.getId(), b);
+			polygonsByBuildingID.put(b.getString("name_js"), polygon);
 
 		}
 
 		mMap.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
 			@Override
 			public void onPolygonClick(Polygon polygon) {
-
-				clearSearchFocus();
-
-				polygon.setStrokeWidth(POLYGON_STROKE_WIDTH_SELECTED);
-				if (lastPolygon != null && !lastPolygon.equals(polygon)) {
-					lastPolygon.setStrokeWidth(POLYGON_STROKE_WIDTH);
-				}
-
-				lastPolygon = polygon;
-
-				try {
-					JSONObject p = polygons.get(polygon.getId());
-
-					if (infoTitle == null) {
-						infoCard.showWithSheetView(getLayoutInflater().inflate(R.layout.building_info, infoCard, false));
-					}
-					else {
-						infoCard.peekSheet();
-					}
-
-					infoTitle = 			(TextView) 				infoCard.findViewById(R.id.infoTitle);
-					infoBuildingNumber = 	(TextView) 				infoCard.findViewById(R.id.infoBuildingNumber);
-					infoAddress = 			(TextView) 				infoCard.findViewById(R.id.infoAddress);
-					infoDetails = 			(TextView) 				infoCard.findViewById(R.id.infoDetails);
-					infoTypeText = 			(TextView) 				infoCard.findViewById(R.id.infoTypeText);
-					infoType =				(CardView) 				infoCard.findViewById(R.id.infoType);
-					infoTypeIcon = 			(AppCompatImageView) 	infoCard.findViewById(R.id.infoTypeIcon);
-
-					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-						infoTitle.setText(Html.fromHtml(p.getString("name_popup"), Html.FROM_HTML_MODE_LEGACY));
-						if (p.getString("bldg_details") == null || p.getString("bldg_details").equals("null")) {
-							infoDetails.setText("");
-						}
-						else {
-							infoDetails.setText(Html.fromHtml(p.getString("bldg_details"), Html.FROM_HTML_MODE_LEGACY));
-						}
-					}
-					else {
-						infoTitle.setText(Html.fromHtml(p.getString("name_popup")));
-						if (p.getString("bldg_details") == null) {
-							infoDetails.setText("");
-						}
-						else {
-							infoDetails.setText(Html.fromHtml(p.getString("bldg_details")));
-						}
-					}
-
-					// @TODO Do the string like you're supposed to
-					if (p.getString("bldg_number") == null || p.getString("bldg_number").equals("null")) {
-						infoBuildingNumber.setText("");
-					}
-					else {
-						String buildingNumberString = String.format(res.getString(R.string.building_number), p.getString("bldg_number"));
-						infoBuildingNumber.setText(buildingNumberString);
-
-					}
-					infoAddress.setText(p.getString("loc_address"));
-
-					switch (p.getString("polygon_type")) {
-						case "academic":
-							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapAcademic));
-							infoTypeIcon.setImageResource(R.drawable.academic);
-							infoTypeText.setText(res.getString(R.string.building_type_academic));
-							break;
-						case "admin":
-							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapAdmin));
-							infoTypeIcon.setImageResource(R.drawable.admin);
-							infoTypeText.setText(res.getString(R.string.building_type_admin));
-							break;
-						case "athletics":
-							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapAthletics));
-							infoTypeIcon.setImageResource(R.drawable.athletics);
-							infoTypeText.setText(res.getString(R.string.building_type_athletics));
-							break;
-						case "residential":
-							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapResidential));
-							infoTypeIcon.setImageResource(R.drawable.residential);
-							infoTypeText.setText(res.getString(R.string.building_type_residential));
-							break;
-						case "student":
-							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapStudent));
-							infoTypeIcon.setImageResource(R.drawable.student);
-							infoTypeText.setText(res.getString(R.string.building_type_student));
-							break;
-						case "support":
-							infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapSupport));
-							infoTypeIcon.setImageResource(R.drawable.support);
-							infoTypeText.setText(res.getString(R.string.building_type_support));
-							break;
-						default:
-							infoType.setVisibility(View.GONE);
-					}
-
-				} catch (JSONException e) {
-					e.printStackTrace();
-				}
-
+				polygonClick(polygon);
 			}
 		});
 
@@ -379,6 +378,103 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		searchBox.clearFocus();
 		InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
 		imm.hideSoftInputFromWindow(searchBox.getWindowToken(), 0);
+	}
+
+	private void polygonClick(Polygon polygon) {
+		clearSearchFocus();
+
+		polygon.setStrokeWidth(POLYGON_STROKE_WIDTH_SELECTED);
+		if (lastPolygon != null && !lastPolygon.equals(polygon)) {
+			lastPolygon.setStrokeWidth(POLYGON_STROKE_WIDTH);
+		}
+
+		lastPolygon = polygon;
+
+		try {
+			JSONObject p = polygons.get(polygon.getId());
+
+			if (infoTitle == null) {
+				infoCard.showWithSheetView(getLayoutInflater().inflate(R.layout.building_info, infoCard, false));
+			}
+			else {
+				infoCard.peekSheet();
+			}
+
+			infoTitle = 			(TextView) 				infoCard.findViewById(R.id.infoTitle);
+			infoBuildingNumber = 	(TextView) 				infoCard.findViewById(R.id.infoBuildingNumber);
+			infoAddress = 			(TextView) 				infoCard.findViewById(R.id.infoAddress);
+			infoDetails = 			(TextView) 				infoCard.findViewById(R.id.infoDetails);
+			infoTypeText = 			(TextView) 				infoCard.findViewById(R.id.infoTypeText);
+			infoType =				(CardView) 				infoCard.findViewById(R.id.infoType);
+			infoTypeIcon = 			(AppCompatImageView) 	infoCard.findViewById(R.id.infoTypeIcon);
+
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+				infoTitle.setText(Html.fromHtml(p.getString("name_popup"), Html.FROM_HTML_MODE_LEGACY));
+				if (p.getString("bldg_details") == null || p.getString("bldg_details").equals("null")) {
+					infoDetails.setText("");
+				}
+				else {
+					infoDetails.setText(Html.fromHtml(p.getString("bldg_details"), Html.FROM_HTML_MODE_LEGACY));
+				}
+			}
+			else {
+				infoTitle.setText(Html.fromHtml(p.getString("name_popup")));
+				if (p.getString("bldg_details") == null) {
+					infoDetails.setText("");
+				}
+				else {
+					infoDetails.setText(Html.fromHtml(p.getString("bldg_details")));
+				}
+			}
+
+			if (p.getString("bldg_number") == null || p.getString("bldg_number").equals("null")) {
+				infoBuildingNumber.setText("");
+			}
+			else {
+				String buildingNumberString = String.format(res.getString(R.string.building_number), p.getString("bldg_number"));
+				infoBuildingNumber.setText(buildingNumberString);
+
+			}
+			infoAddress.setText(p.getString("loc_address"));
+
+			switch (p.getString("polygon_type")) {
+				case "academic":
+					infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapAcademic));
+					infoTypeIcon.setImageResource(R.drawable.academic);
+					infoTypeText.setText(res.getString(R.string.building_type_academic));
+					break;
+				case "admin":
+					infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapAdmin));
+					infoTypeIcon.setImageResource(R.drawable.admin);
+					infoTypeText.setText(res.getString(R.string.building_type_admin));
+					break;
+				case "athletics":
+					infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapAthletics));
+					infoTypeIcon.setImageResource(R.drawable.athletics);
+					infoTypeText.setText(res.getString(R.string.building_type_athletics));
+					break;
+				case "residential":
+					infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapResidential));
+					infoTypeIcon.setImageResource(R.drawable.residential);
+					infoTypeText.setText(res.getString(R.string.building_type_residential));
+					break;
+				case "student":
+					infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapStudent));
+					infoTypeIcon.setImageResource(R.drawable.student);
+					infoTypeText.setText(res.getString(R.string.building_type_student));
+					break;
+				case "support":
+					infoType.setCardBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.mapSupport));
+					infoTypeIcon.setImageResource(R.drawable.support);
+					infoTypeText.setText(res.getString(R.string.building_type_support));
+					break;
+				default:
+					infoType.setVisibility(View.GONE);
+			}
+
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
 	}
 
 

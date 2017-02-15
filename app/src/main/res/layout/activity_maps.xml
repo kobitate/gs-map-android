@@ -35,46 +35,81 @@
             android:id="@+id/searchCard">
 
             <LinearLayout
-                android:orientation="horizontal"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                >
-
-                <android.support.v7.widget.AppCompatImageView
-                    android:layout_height="wrap_content"
-                    map:srcCompat="@drawable/places_ic_search"
-                    android:id="@+id/imageView"
-                    android:layout_weight="1"
-                    android:layout_width="64dp"
-                    android:layout_gravity="center_vertical|center_horizontal"
-                    android:layout_marginLeft="8dp"/>
-
-                <EditText
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textPersonName"
-                    android:ems="10"
-                    android:id="@+id/searchBox"
-                    android:layout_weight="1"
-                    android:paddingBottom="12dp"
-                    android:paddingTop="12dp"
-                    android:nextFocusUp="@id/searchBox"
-                    android:nextFocusDown="@id/searchBox"
-                    android:background="@android:color/transparent"
-                    android:paddingLeft="8dp"/>
-
-            </LinearLayout>
-
-            <LinearLayout
                 android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">
 
-                <ListView
+                <LinearLayout
+                    android:orientation="horizontal"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:id="@+id/searchResults"
-                    android:visibility="gone"/>
+                    android:layout_height="match_parent"
+                    >
+
+                    <android.support.v7.widget.AppCompatImageView
+                        android:layout_height="wrap_content"
+                        map:srcCompat="@drawable/places_ic_search"
+                        android:id="@+id/imageView"
+                        android:layout_weight="1"
+                        android:layout_width="64dp"
+                        android:layout_gravity="center_vertical|center_horizontal"
+                        android:layout_marginLeft="8dp"/>
+
+                    <EditText
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textPersonName"
+                        android:ems="10"
+                        android:id="@+id/searchBox"
+                        android:layout_weight="1"
+                        android:paddingBottom="12dp"
+                        android:paddingTop="12dp"
+                        android:nextFocusUp="@id/searchBox"
+                        android:nextFocusDown="@id/searchBox"
+                        android:background="@android:color/transparent"
+                        android:paddingLeft="8dp"/>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:id="@+id/searchResultsOuter"
+                    android:visibility="gone">
+
+                    <ListView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:id="@+id/searchResults"
+                        />
+
+                    <LinearLayout
+                        android:orientation="horizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="?attr/colorButtonNormal"
+                        android:padding="4dp">
+
+                        <TextView
+                            android:text="Powered by"
+                            android:layout_width="fill_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:textAlignment="textEnd"
+                            android:textStyle="normal|bold"
+                            android:layout_gravity="center_vertical"/>
+
+                        <android.support.v7.widget.AppCompatImageView
+                            map:srcCompat="@drawable/algolia"
+                            android:id="@+id/imageView4"
+                            android:layout_weight="1"
+                            android:layout_gravity="center_vertical"
+                            android:layout_marginLeft="6dp"
+                            android:layout_height="match_parent"
+                            android:layout_width="100dp"/>
+                    </LinearLayout>
+
+                </LinearLayout>
 
             </LinearLayout>
 

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:app="http://schemas.android.com/apk/res-auto"
+              android:layout_width="match_parent"
+              android:layout_height="60dp"
+              android:paddingEnd="16dp"
+              android:paddingStart="16dp">
+
+    <android.support.v7.widget.AppCompatImageView
+        app:srcCompat="@drawable/buildings"
+        android:id="@+id/imageView2"
+        android:layout_weight="1"
+        android:layout_gravity="center_vertical"
+        android:layout_width="64dp"
+        android:layout_height="match_parent"/>
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_gravity="center_vertical"
+        android:paddingStart="8dp">
+
+        <TextView
+            android:text="Item Title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/searchItemTitle"
+            android:textAppearance="@android:style/TextAppearance.Material.SearchResult.Title"/>
+
+        <TextView
+            android:text="Item Subtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/searchItemSubtitle"
+            android:textAppearance="@android:style/TextAppearance.Material.SearchResult.Subtitle"/>
+    </LinearLayout>
+</LinearLayout>

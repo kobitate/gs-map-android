@@ -160,17 +160,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			@Override
 			public void requestCompleted(JSONObject result, AlgoliaException e) {
 
-				lastSearch = result;
-
 				ArrayList<String[]> adapterResult = new ArrayList<>();
+				lastSearch = new ArrayList<>();
 
 				try {
 					JSONArray hits = result.getJSONArray("hits");
 					for (int i = 0; i < hits.length(); i++) {
 						JSONObject b = hits.getJSONObject(i);
-						adapterResult.add(new String[]{
-								b.getString("name")
-						});
+						Polygon p = polygonsByBuildingID.get(b.getString("objectID"));
+
+						if (p != null) {
+							if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+								adapterResult.add(new String[]{
+										Html.fromHtml(b.getString("name"), Html.FROM_HTML_MODE_LEGACY).toString()
+								});
+							}
+							else {
+								adapterResult.add(new String[]{
+										Html.fromHtml(b.getString("name")).toString()
+								});
+							}
+							lastSearch.add(b);
+						}
+
 					}
 				} catch (JSONException e1) {
 					e1.printStackTrace();
@@ -207,25 +219,40 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			}
 		});
 
+		searchBox.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+			@Override
+			public void onFocusChange(View view, boolean focused) {
+				if (focused && searchBox.getText().length() > 0) {
+					searchResultsOuter.setVisibility(View.VISIBLE);
+					infoCard.dismissSheet();
+				}
+			}
+		});
+
 		searchResults.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 			@Override
 			public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
 				try {
 
-					JSONObject b = lastSearch.getJSONArray("hits").getJSONObject(i);
+					JSONObject b = lastSearch.get(i);
 					Polygon p = polygonsByBuildingID.get(b.getString("objectID"));
 
-					polygonClick(p);
-					searchResultsOuter.setVisibility(View.GONE);
-
-					LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
-					for (LatLng latLng : p.getPoints()) {
-						boundsBuilder.include(latLng);
+					if (p == null) {
+						Toast.makeText(MapsActivity.this, "Item by the ID " + b.getString("objectID") + " doesn't exist", Toast.LENGTH_SHORT).show();
 					}
+					else {
+						polygonClick(p);
+						searchResultsOuter.setVisibility(View.GONE);
 
-					LatLngBounds bounds = boundsBuilder.build();
+						LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+						for (LatLng latLng : p.getPoints()) {
+							boundsBuilder.include(latLng);
+						}
 
-					mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 300));
+						LatLngBounds bounds = boundsBuilder.build();
+
+						mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 300));
+					}
 
 				} catch (JSONException e) {
 					e.printStackTrace();

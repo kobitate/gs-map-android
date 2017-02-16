@@ -25,7 +25,7 @@
     <LinearLayout
         android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:id="@+id/searchOuter">
 
         <android.support.v7.widget.CardView
@@ -37,12 +37,12 @@
             <LinearLayout
                 android:orientation="vertical"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent">
+                android:layout_height="wrap_content">
 
                 <LinearLayout
                     android:orientation="horizontal"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     >
 
                     <android.support.v7.widget.AppCompatImageView
@@ -70,7 +70,7 @@
 
                 </LinearLayout>
 
-                <LinearLayout
+                <RelativeLayout
                     android:orientation="vertical"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
@@ -79,16 +79,19 @@
 
                     <ListView
                         android:layout_width="match_parent"
-                        android:layout_height="match_parent"
+                        android:layout_height="wrap_content"
                         android:id="@+id/searchResults"
+                        android:paddingBottom="32dp"
                         />
 
                     <LinearLayout
                         android:orientation="horizontal"
                         android:layout_width="match_parent"
-                        android:layout_height="match_parent"
+                        android:layout_height="wrap_content"
                         android:background="?attr/colorButtonNormal"
-                        android:padding="4dp">
+                        android:padding="4dp"
+                        android:layout_alignParentBottom="false"
+                        android:layout_alignBottom="@+id/searchResults">
 
                         <TextView
                             android:text="Powered by"
@@ -109,7 +112,7 @@
                             android:layout_width="100dp"/>
                     </LinearLayout>
 
-                </LinearLayout>
+                </RelativeLayout>
 
             </LinearLayout>
 

@@ -24,6 +24,7 @@ import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -61,9 +62,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private ArrayMap<String, JSONObject> polygons;
 	private ArrayMap<String, Polygon> polygonsByBuildingID;
 
-	private final double 		START_LAT = 	32.421205;
-	private final double 		START_LNG = 	-81.782044;
-	private final float 		START_ZOOM = 	14.0f;
+	private final double 		START_LAT = 	32.42299418602006;
+	private final double 		START_LNG = 	-81.78550992161036;
+	private final float 		START_ZOOM = 	14.56219f;
 
 	private final int 			POLYGON_ALPHA = 					77;
 	private final float 		POLYGON_STROKE_WIDTH = 				3.0f;
@@ -87,9 +88,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private LinearLayout 		searchOuter;
 	private EditText 			searchBox;
 	private ListView 			searchResults;
-	private LinearLayout 		searchResultsOuter;
+	private RelativeLayout 		searchResultsOuter;
 
-	private JSONObject			lastSearch;
+	private ArrayList<JSONObject> lastSearch;
 
 	private Resources 			res;
 	private Polygon 			lastPolygon = null;
@@ -143,14 +144,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	}
 
 	private void setupSearch() {
-		searchCard = 			(CardView) 		findViewById(R.id.searchCard);
-		searchOuter = 			(LinearLayout) 	findViewById(R.id.searchOuter);
-		searchBox = 			(EditText) 		findViewById(R.id.searchBox);
-		searchResults = 		(ListView) 		findViewById(R.id.searchResults);
-		searchResultsOuter =	(LinearLayout) 	findViewById(R.id.searchResultsOuter);
+		searchCard = 			(CardView) 			findViewById(R.id.searchCard);
+		searchOuter = 			(LinearLayout) 		findViewById(R.id.searchOuter);
+		searchBox = 			(EditText) 			findViewById(R.id.searchBox);
+		searchResults = 		(ListView) 			findViewById(R.id.searchResults);
+		searchResultsOuter =	(RelativeLayout)	findViewById(R.id.searchResultsOuter);
 
 		searchOuter.setPadding(0, getStatusBarHeight(), 0, 0);
 		searchBox.setHint(R.string.search_placeholder);
+
 
 		final Index search = algolia.getIndex("dev_campusmap");
 
@@ -238,7 +240,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 		LatLng startPos = new LatLng(START_LAT, START_LNG);
 		mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(startPos, START_ZOOM));
-		mMap.setPadding(0, searchOuter.getMeasuredHeight() - 32, 0, 0);
+		mMap.setPadding(0, 230, 0, 0);
 
 		buildings = parseBuildings();
 

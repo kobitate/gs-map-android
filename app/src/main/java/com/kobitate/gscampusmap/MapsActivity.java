@@ -40,6 +40,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
 
@@ -208,11 +209,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			@Override
 			public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
 				try {
+
 					JSONObject b = lastSearch.getJSONArray("hits").getJSONObject(i);
 					Polygon p = polygonsByBuildingID.get(b.getString("objectID"));
+
 					polygonClick(p);
 					searchResultsOuter.setVisibility(View.GONE);
-					// @TODO Pan Camera to building
+
+					LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+					for (LatLng latLng : p.getPoints()) {
+						boundsBuilder.include(latLng);
+					}
+
+					LatLngBounds bounds = boundsBuilder.build();
+
+					mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 300));
+
 				} catch (JSONException e) {
 					e.printStackTrace();
 				}

@@ -20,5 +20,5 @@
     <string name="info_mapapp_fallback_name">App Mapas</string>
     <string name="info_walking_directions">Indicaciones a Pie</string>
     <string name="directions_error">Ha ocurrido un error recuperando sus indicaciones</string>
-    <string name="directions_no_location">Por favor permite acceso a los servicios de dirección para continuar</string>
+    <string name="directions_no_location">Buscando dirección. Por favor espere y inténtalo otra vez.</string>
 </resources>

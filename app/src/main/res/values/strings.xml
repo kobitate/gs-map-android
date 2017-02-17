@@ -24,6 +24,6 @@
     <string name="info_mapapp_fallback_name">Map App</string>
     <string name="info_walking_directions">Get Walking Directions</string>
     <string name="directions_error">Something went wrong retrieving directions</string>
-    <string name="directions_no_location">Please allow location access to continue</string>
+    <string name="directions_no_location">Finding location. Please wait and try again.</string>
 
 </resources>

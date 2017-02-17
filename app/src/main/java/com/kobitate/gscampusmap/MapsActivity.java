@@ -47,6 +47,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
+import com.google.android.gms.vision.text.Text;
 import com.mikepenz.materialdrawer.Drawer;
 import com.mikepenz.materialdrawer.DrawerBuilder;
 import com.mikepenz.materialdrawer.interfaces.OnCheckedChangeListener;
@@ -114,6 +115,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private TextView 			infoBuildingNumber;
 	private BottomSheetLayout 	infoCard;
 	private TextView 			infoAddress;
+	private TextView 			infoAddressCity;
 	private TextView 			infoDetails;
 	private TextView 			infoTypeText;
 	private CardView 			infoType;
@@ -195,6 +197,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				ArrayList<Polygon> polygonsToHide = polygonCategories.get(hideType);
 				for (Polygon p : polygonsToHide) {
 					p.setVisible(isChecked);
+					p.setClickable(isChecked);
 				}
 			}
 		};
@@ -623,6 +626,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			infoTitle = 			(TextView) 				infoCard.findViewById(R.id.infoTitle);
 			infoBuildingNumber = 	(TextView) 				infoCard.findViewById(R.id.infoBuildingNumber);
 			infoAddress = 			(TextView) 				infoCard.findViewById(R.id.infoAddress);
+			infoAddressCity = 		(TextView)				infoCard.findViewById(R.id.infoAddressCity);
 			infoDetails = 			(TextView) 				infoCard.findViewById(R.id.infoDetails);
 			infoTypeText = 			(TextView) 				infoCard.findViewById(R.id.infoTypeText);
 			infoType =				(CardView) 				infoCard.findViewById(R.id.infoType);
@@ -655,7 +659,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				infoBuildingNumber.setText(buildingNumberString);
 
 			}
-			infoAddress.setText(p.getString("loc_address"));
+
+			if (p.getString("loc_address") == null || p.getString("loc_address").equals("null")) {
+				infoAddress.setText("");
+				infoAddress.setVisibility(View.GONE);
+				infoAddressCity.setVisibility(View.GONE);
+			}
+			else {
+				infoAddress.setText(p.getString("loc_address"));
+				infoAddress.setVisibility(View.VISIBLE);
+				infoAddressCity.setVisibility(View.VISIBLE);
+			}
 
 			switch (p.getString("polygon_type")) {
 				case "academic":

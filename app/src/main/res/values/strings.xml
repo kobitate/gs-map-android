@@ -19,5 +19,6 @@
     <string name="drawer_github">Source Code on GitHub</string>
     <string name="algolia_app_id" translatable="false">0T1K07PWTM</string>
     <string name="algolia_api_key" translatable="false">a70c25ee5839fcc5faf31f8595a2fa59</string>
+    <string name="search_building_notfound">The Item by the ID %1$s doesn\'t exist</string>
 
 </resources>

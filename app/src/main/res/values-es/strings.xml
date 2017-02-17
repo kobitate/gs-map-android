@@ -15,4 +15,5 @@
     <string name="drawer_section_about">Sobre App</string>
     <string name="drawer_legal">Avisos Legales</string>
     <string name="drawer_github">Código Fuente en GitHub</string>
+    <string name="search_building_notfound">El lugar con el identificador %1$s no existe</string>
 </resources>

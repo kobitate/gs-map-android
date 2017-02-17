@@ -413,7 +413,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 					Polygon p = polygonsByBuildingID.get(b.getString("objectID"));
 
 					if (p == null) {
-						Toast.makeText(MapsActivity.this, "Item by the ID " + b.getString("objectID") + " doesn't exist", Toast.LENGTH_SHORT).show();
+						String toastString = String.format(res.getString(R.string.building_number), b.getString("objectID"));
+						Toast.makeText(MapsActivity.this, toastString, Toast.LENGTH_LONG).show();
 					}
 					else {
 						polygonClick(p);

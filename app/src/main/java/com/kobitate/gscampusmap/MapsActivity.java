@@ -412,7 +412,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 					Polygon p = polygonsByBuildingID.get(b.getString("objectID"));
 
 					if (p == null) {
-						String toastString = String.format(res.getString(R.string.building_number), b.getString("objectID"));
+						String toastString = String.format(res.getString(R.string.search_building_notfound), b.getString("objectID"));
 						Toast.makeText(MapsActivity.this, toastString, Toast.LENGTH_LONG).show();
 					}
 					else {

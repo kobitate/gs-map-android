@@ -38,7 +38,6 @@ import com.algolia.search.saas.Index;
 import com.algolia.search.saas.Query;
 import com.flipboard.bottomsheet.BottomSheetLayout;
 import com.flipboard.bottomsheet.OnSheetDismissedListener;
-import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;

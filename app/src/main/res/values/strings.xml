@@ -13,4 +13,9 @@
 
     <string name="building_number">Building #%1$s</string>
 
+    <string name="drawer_map_home">Map Home</string>
+    <string name="drawer_section_about">About App</string>
+    <string name="drawer_legal">Legal Notices</string>
+    <string name="drawer_github">Source Code on GitHub</string>
+
 </resources>

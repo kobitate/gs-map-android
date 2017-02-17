@@ -10,4 +10,9 @@
     <string name="building_type_support">Servicios de Apoyo</string>
     <string name="search_placeholder">Buscar</string>
     <string name="title_activity_maps">Mapa</string>
+
+    <string name="drawer_map_home">Mapa</string>
+    <string name="drawer_section_about">Sobre App</string>
+    <string name="drawer_legal">Avisos Legales</string>
+    <string name="drawer_github">Código Fuente en GitHub</string>
 </resources>

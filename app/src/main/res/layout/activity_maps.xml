@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_height="fill_parent"
     android:layout_width="fill_parent"
-    android:id="@+id/mapOuter">
+    android:id="@+id/mapOuter"
+    >
 
     <!-- Dummy item to prevent AutoCompleteTextView from receiving focus -->
     <LinearLayout
@@ -20,7 +21,7 @@
         android:layout_height="match_parent"
         tools:context="com.kobitate.gscampusmap.MapsActivity"
         android:layout_alignParentTop="true"
-        android:layout_alignParentStart="true"/>
+        android:layout_alignParentStart="true" />
 
     <LinearLayout
         android:orientation="vertical"
@@ -47,8 +48,8 @@
 
                     <android.support.v7.widget.AppCompatImageView
                         android:layout_height="wrap_content"
-                        map:srcCompat="@drawable/places_ic_search"
-                        android:id="@+id/imageView"
+                        map:srcCompat="@drawable/menu"
+                        android:id="@+id/menuLaunch"
                         android:layout_weight="1"
                         android:layout_width="64dp"
                         android:layout_gravity="center_vertical|center_horizontal"
@@ -127,8 +128,8 @@
         <LinearLayout
             android:orientation="vertical"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:padding="16dp">
+            android:layout_height="fill_parent"
+            >
 
             <View
                 android:layout_width="match_parent"

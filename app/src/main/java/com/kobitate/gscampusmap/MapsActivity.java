@@ -89,9 +89,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 	private final int 			REQUEST_LOCATION_PERMISSION = 		0;
 
-	private final String		ALGOLIA_APPLICATION_ID = 			"0T1K07PWTM";
-	private final String		ALGOLIA_API_KEY =					"a70c25ee5839fcc5faf31f8595a2fa59";
-
 	private final int			DRAWER_ITEM_HOME = 					1;
 	private final int			DRAWER_ITEM_ABOUT = 				2;
 	private final int			DRAWER_ITEM_GITHUB = 				3;
@@ -134,10 +131,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_maps);
+		
+		res = getResources();
 
 		setupDrawer();
 
-		algolia = new Client(ALGOLIA_APPLICATION_ID, ALGOLIA_API_KEY);
+		algolia = new Client(res.getString(R.string.algolia_app_id), res.getString(R.string.algolia_api_key));
 
 		setupMap();
 		setupInfoCard();
@@ -154,7 +153,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		polygonCategories.put("student", new ArrayList<Polygon>());
 		polygonCategories.put("support", new ArrayList<Polygon>());
 
-		res = getResources();
 
 
 	}

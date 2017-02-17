@@ -59,6 +59,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.mikepenz.materialdrawer.Drawer;
 import com.mikepenz.materialdrawer.DrawerBuilder;
@@ -145,7 +146,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 	private Client				algolia;
 	private GoogleApiClient 	googleApiClient;
-	private PolylineOptions 	directionsLine;
+	private Polyline		 	directionsLine;
 	private Location 			currentLocation;
 
 	@Override
@@ -792,8 +793,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 					if (mMap.isMyLocationEnabled()) {
 						// hide old directions
 						if (directionsLine != null) {
-							directionsLine.visible(false);
-							directionsLine.clickable(false);
+							directionsLine.remove();
 						}
 						
 						if (currentLocation == null) {
@@ -815,13 +815,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 												Leg leg = route.getLegList().get(0);
 												ArrayList<LatLng> pointList = leg.getDirectionPoint();
 
-												directionsLine = DirectionConverter.createPolyline(
+												PolylineOptions directionsStyle = DirectionConverter.createPolyline(
 														getApplicationContext(), 
 														pointList, 
 														5, 
 														ContextCompat.getColor(getApplicationContext(), R.color.mapAcademic));
 												
-												mMap.addPolyline(directionsLine);
+												directionsLine = mMap.addPolyline(directionsStyle);
 											} else {
 												Toast.makeText(MapsActivity.this, res.getString(R.string.directions_error), Toast.LENGTH_LONG).show();
 											}

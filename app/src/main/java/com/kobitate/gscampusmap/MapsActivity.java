@@ -131,7 +131,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_maps);
-		
+
 		res = getResources();
 
 		setupDrawer();
@@ -146,12 +146,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		polygonsByBuildingID = 	new ArrayMap<>();
 
 		polygonCategories = 	new ArrayMap<>();
-		polygonCategories.put("academic", new ArrayList<Polygon>());
-		polygonCategories.put("admin", new ArrayList<Polygon>());
-		polygonCategories.put("athletics", new ArrayList<Polygon>());
-		polygonCategories.put("residential", new ArrayList<Polygon>());
-		polygonCategories.put("student", new ArrayList<Polygon>());
-		polygonCategories.put("support", new ArrayList<Polygon>());
+
+		polygonCategories.put("academic", 		new ArrayList<Polygon>());
+		polygonCategories.put("admin", 			new ArrayList<Polygon>());
+		polygonCategories.put("athletics", 		new ArrayList<Polygon>());
+		polygonCategories.put("residential", 	new ArrayList<Polygon>());
+		polygonCategories.put("student", 		new ArrayList<Polygon>());
+		polygonCategories.put("support", 		new ArrayList<Polygon>());
 
 
 
@@ -349,6 +350,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 								});
 							}
 							else {
+								//noinspection deprecation
 								adapterResult.add(new String[]{
 										Html.fromHtml(b.getString("name")).toString()
 								});
@@ -466,6 +468,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			InputStream in = getAssets().open("buildings.json");
 			int size = in.available();
 			byte[] buffer = new byte[size];
+			//noinspection ResultOfMethodCallIgnored
 			in.read(buffer);
 			in.close();
 			json = new String(buffer, "UTF-8");
@@ -634,11 +637,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				}
 			}
 			else {
+				//noinspection deprecation
 				infoTitle.setText(Html.fromHtml(p.getString("name_popup")));
 				if (p.getString("bldg_details") == null) {
 					infoDetails.setText("");
 				}
 				else {
+					//noinspection deprecation
 					infoDetails.setText(Html.fromHtml(p.getString("bldg_details")));
 				}
 			}

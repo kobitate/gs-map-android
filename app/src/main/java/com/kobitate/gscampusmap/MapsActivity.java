@@ -4,8 +4,11 @@ import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.graphics.Color;
+import android.location.Location;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.support.annotation.NonNull;
@@ -31,6 +34,13 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.akexorcist.googledirection.DirectionCallback;
+import com.akexorcist.googledirection.GoogleDirection;
+import com.akexorcist.googledirection.constant.TransportMode;
+import com.akexorcist.googledirection.model.Direction;
+import com.akexorcist.googledirection.model.Leg;
+import com.akexorcist.googledirection.model.Route;
+import com.akexorcist.googledirection.util.DirectionConverter;
 import com.algolia.search.saas.AlgoliaException;
 import com.algolia.search.saas.Client;
 import com.algolia.search.saas.CompletionHandler;
@@ -38,6 +48,9 @@ import com.algolia.search.saas.Index;
 import com.algolia.search.saas.Query;
 import com.flipboard.bottomsheet.BottomSheetLayout;
 import com.flipboard.bottomsheet.OnSheetDismissedListener;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -46,6 +59,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.mikepenz.materialdrawer.Drawer;
 import com.mikepenz.materialdrawer.DrawerBuilder;
 import com.mikepenz.materialdrawer.interfaces.OnCheckedChangeListener;
@@ -62,6 +76,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
 
 import de.psdev.licensesdialog.LicensesDialogFragment;
 import de.psdev.licensesdialog.licenses.ApacheSoftwareLicense20;
@@ -110,6 +126,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private TextView 			infoTypeText;
 	private CardView 			infoType;
 	private AppCompatImageView 	infoTypeIcon;
+	private CardView			infoOpenInMaps;
+	private TextView			infoOpenInMapsText;
+	private CardView			infoWalkingDirections;
 
 	private AppCompatImageView	menuLaunch;
 
@@ -125,6 +144,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private Polygon 			lastPolygon = null;
 
 	private Client				algolia;
+	private GoogleApiClient 	googleApiClient;
+	private PolylineOptions 	directionsLine;
+	private Location 			currentLocation;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -136,6 +158,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		setupDrawer();
 
 		algolia = new Client(res.getString(R.string.algolia_app_id), res.getString(R.string.algolia_api_key));
+
+		googleApiClient = new GoogleApiClient.Builder(this)
+				.addApi(LocationServices.API)
+				.build();
 
 		setupMap();
 		setupInfoCard();
@@ -152,6 +178,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		polygonCategories.put("residential", 	new ArrayList<Polygon>());
 		polygonCategories.put("student", 		new ArrayList<Polygon>());
 		polygonCategories.put("support", 		new ArrayList<Polygon>());
+		
+		LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+		lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, new android.location.LocationListener() {
+			@Override
+			public void onLocationChanged(Location location) {
+				currentLocation = location;
+			}
+
+			@Override
+			public void onStatusChanged(String s, int i, Bundle bundle) {
+
+			}
+
+			@Override
+			public void onProviderEnabled(String s) {
+
+			}
+
+			@Override
+			public void onProviderDisabled(String s) {
+
+			}
+		});
 
 
 
@@ -626,6 +675,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			infoTypeText = 			(TextView) 				infoCard.findViewById(R.id.infoTypeText);
 			infoType =				(CardView) 				infoCard.findViewById(R.id.infoType);
 			infoTypeIcon = 			(AppCompatImageView) 	infoCard.findViewById(R.id.infoTypeIcon);
+			infoOpenInMaps = 		(CardView)				infoCard.findViewById(R.id.infoOpenInMaps);
+			infoOpenInMapsText =	(TextView)				infoCard.findViewById(R.id.infoOpenInMapsText);
+			infoWalkingDirections = (CardView)				infoCard.findViewById(R.id.infoWalkingDirections);
 
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
 				infoTitle.setText(Html.fromHtml(p.getString("name_popup"), Html.FROM_HTML_MODE_LEGACY));
@@ -702,6 +754,92 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				default:
 					infoType.setVisibility(View.GONE);
 			}
+
+			String[] coords = p.getString("loc_coords").split(",");
+			final float pLat = Float.valueOf(coords[0]);
+			final float pLng = Float.valueOf(coords[1]);
+
+			String uri = String.format(Locale.ENGLISH, "geo:%f,%f?q=" + p.getString("loc_address"), pLat, pLng);
+			final Intent mapsIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+
+			PackageManager pm = getPackageManager();
+			ResolveInfo intentAppInfo = pm.resolveActivity(mapsIntent, PackageManager.MATCH_DEFAULT_ONLY);
+			String defaultPackageName = intentAppInfo.activityInfo.packageName;
+			String defaultMapsApp = res.getString(R.string.info_mapapp_fallback_name);
+
+			try {
+				 defaultMapsApp = (String) pm.getApplicationLabel(pm.getApplicationInfo(defaultPackageName, 0));
+			} catch (PackageManager.NameNotFoundException e) {
+				e.printStackTrace();
+			}
+
+			if (defaultPackageName.equals("android")) {
+				defaultMapsApp = res.getString(R.string.info_mapapp_fallback_name);
+			}
+
+			infoOpenInMapsText.setText(String.format(res.getString(R.string.info_open_in_app), defaultMapsApp));
+
+			infoOpenInMaps.setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View view) {
+					getApplicationContext().startActivity(mapsIntent);
+				}
+			});
+
+			infoWalkingDirections.setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View view) {
+					if (mMap.isMyLocationEnabled()) {
+						// hide old directions
+						if (directionsLine != null) {
+							directionsLine.visible(false);
+							directionsLine.clickable(false);
+						}
+						
+						if (currentLocation == null) {
+							Toast.makeText(MapsActivity.this, getString(R.string.directions_no_location), Toast.LENGTH_LONG).show();
+						}
+
+						else {
+
+							GoogleDirection
+									.withServerKey(res.getString(R.string.google_maps_serverkey))
+									.from(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()))
+									.to(new LatLng(pLat, pLng))
+									.transportMode(TransportMode.WALKING)
+									.execute(new DirectionCallback() {
+										@Override
+										public void onDirectionSuccess(Direction direction, String rawBody) {
+											if (direction.isOK()) {
+												Route route = direction.getRouteList().get(0);
+												Leg leg = route.getLegList().get(0);
+												ArrayList<LatLng> pointList = leg.getDirectionPoint();
+
+												directionsLine = DirectionConverter.createPolyline(
+														getApplicationContext(), 
+														pointList, 
+														5, 
+														ContextCompat.getColor(getApplicationContext(), R.color.mapAcademic));
+												
+												mMap.addPolyline(directionsLine);
+											} else {
+												Toast.makeText(MapsActivity.this, res.getString(R.string.directions_error), Toast.LENGTH_LONG).show();
+											}
+										}
+
+										@Override
+										public void onDirectionFailure(Throwable t) {
+
+										}
+									});
+						}
+					}
+					else {
+
+					}
+
+				}
+			});
 
 		} catch (JSONException e) {
 			e.printStackTrace();

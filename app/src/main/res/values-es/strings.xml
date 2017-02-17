@@ -16,4 +16,9 @@
     <string name="drawer_legal">Avisos Legales</string>
     <string name="drawer_github">Código Fuente en GitHub</string>
     <string name="search_building_notfound">El lugar con el identificador %1$s no existe</string>
+    <string name="info_open_in_app">Inciniar con %1$s</string>
+    <string name="info_mapapp_fallback_name">App Mapas</string>
+    <string name="info_walking_directions">Indicaciones a Pie</string>
+    <string name="directions_error">Ha ocurrido un error recuperando sus indicaciones</string>
+    <string name="directions_no_location">Por favor permite acceso a los servicios de dirección para continuar</string>
 </resources>

@@ -179,31 +179,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		polygonCategories.put("residential", 	new ArrayList<Polygon>());
 		polygonCategories.put("student", 		new ArrayList<Polygon>());
 		polygonCategories.put("support", 		new ArrayList<Polygon>());
-		
-		LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-		lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, new android.location.LocationListener() {
-			@Override
-			public void onLocationChanged(Location location) {
-				currentLocation = location;
-			}
-
-			@Override
-			public void onStatusChanged(String s, int i, Bundle bundle) {
-
-			}
-
-			@Override
-			public void onProviderEnabled(String s) {
-
-			}
-
-			@Override
-			public void onProviderDisabled(String s) {
-
-			}
-		});
-
-
 
 	}
 
@@ -507,7 +482,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_LOCATION_PERMISSION);
 			return;
 		}
-		mMap.setMyLocationEnabled(true);
+		else {
+			mMap.setMyLocationEnabled(true);
+			setupLocationListener();
+		}
+
 	}
 
 	// Function from Stack Overflow, CC BY-SA 3.0
@@ -618,6 +597,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		if (requestCode == REQUEST_LOCATION_PERMISSION) {
 			if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 				mMap.setMyLocationEnabled(true);
+				setupLocationListener();
 				Toast.makeText(this, "Location Permission Granted", Toast.LENGTH_SHORT).show();
 			}
 		}
@@ -895,6 +875,31 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		drawer.setSelection(DRAWER_ITEM_HOME);
 
 
+	}
+
+	private void setupLocationListener() {
+		LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+		lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, new android.location.LocationListener() {
+			@Override
+			public void onLocationChanged(Location location) {
+				currentLocation = location;
+			}
+
+			@Override
+			public void onStatusChanged(String s, int i, Bundle bundle) {
+
+			}
+
+			@Override
+			public void onProviderEnabled(String s) {
+
+			}
+
+			@Override
+			public void onProviderDisabled(String s) {
+
+			}
+		});
 	}
 
 

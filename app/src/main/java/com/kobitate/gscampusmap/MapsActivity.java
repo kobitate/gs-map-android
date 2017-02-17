@@ -853,6 +853,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				new ApacheSoftwareLicense20()
 		));
 		notices.addNotice(new Notice(
+				"GoogleDirectionLibrary",
+				"https://github.com/akexorcist/Android-GoogleDirectionLibrary",
+				"Akexorcist",
+				new ApacheSoftwareLicense20()
+		));
+		notices.addNotice(new Notice(
 				"Flipboard BottomSheet",
 				"https://github.com/Flipboard/bottomsheet",
 				"Flipboard",

@@ -6,11 +6,16 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
@@ -49,21 +54,28 @@ import com.algolia.search.saas.Query;
 import com.flipboard.bottomsheet.BottomSheetLayout;
 import com.flipboard.bottomsheet.OnSheetDismissedListener;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.gson.Gson;
 import com.mikepenz.materialdrawer.Drawer;
 import com.mikepenz.materialdrawer.DrawerBuilder;
+import com.mikepenz.materialdrawer.holder.BadgeStyle;
 import com.mikepenz.materialdrawer.interfaces.OnCheckedChangeListener;
+import com.mikepenz.materialdrawer.model.ExpandableBadgeDrawerItem;
+import com.mikepenz.materialdrawer.model.ExpandableDrawerItem;
 import com.mikepenz.materialdrawer.model.PrimaryDrawerItem;
 import com.mikepenz.materialdrawer.model.SecondarySwitchDrawerItem;
 import com.mikepenz.materialdrawer.model.SectionDrawerItem;
@@ -73,17 +85,20 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Locale;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import de.psdev.licensesdialog.LicensesDialogFragment;
 import de.psdev.licensesdialog.licenses.ApacheSoftwareLicense20;
 import de.psdev.licensesdialog.licenses.BSD3ClauseLicense;
-import de.psdev.licensesdialog.licenses.License;
 import de.psdev.licensesdialog.model.Notice;
 import de.psdev.licensesdialog.model.Notices;
 
@@ -94,10 +109,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private ArrayMap<String, JSONObject> polygons;
 	private ArrayMap<String, Polygon> polygonsByBuildingID;
 	private ArrayMap<String, ArrayList<Polygon>> polygonCategories;
+	private ArrayMap<String, Marker> liveBuses;
 
 	private final double 		START_LAT = 						32.42299418602006;
 	private final double 		START_LNG = 						-81.78550992161036;
 	private final float 		START_ZOOM = 						14.56219f;
+
+	private final int			TRANSIT_UPDATE_MILLISECONDS = 		3000;
 
 	private final int 			POLYGON_ALPHA = 					77;
 	private final float 		POLYGON_STROKE_WIDTH = 				3.0f;
@@ -115,6 +133,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private final int			DRAWER_SWITCH_RESIDENTIAL =			7;
 	private final int			DRAWER_SWITCH_STUDENT = 			8;
 	private final int			DRAWER_SWITCH_SUPPORT = 			9;
+
+	private final int			DRAWER_ITEM_TRANSIT = 				10;
+
+	private final int			DRAWER_SWITCH_TRANSIT_BLUE =		11;
+	private final int			DRAWER_SWITCH_TRANSIT_GOLD =		12;
+	private final int			DRAWER_SWITCH_TRANSIT_STADIUM =		13;
 
 	private Drawer				drawer;
 
@@ -185,7 +209,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private void setupDrawer() {
 
 
-		OnCheckedChangeListener drawerSwitchListener = new OnCheckedChangeListener() {
+		OnCheckedChangeListener drawerBuildingSwitchListener = new OnCheckedChangeListener() {
 			@Override
 			public void onCheckedChanged(IDrawerItem drawerItem, CompoundButton buttonView, boolean isChecked) {
 				String hideType;
@@ -219,66 +243,118 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			}
 		};
 
+		OnCheckedChangeListener drawerTransitSwitchListener = new OnCheckedChangeListener() {
+			@Override
+			public void onCheckedChanged(IDrawerItem drawerItem, CompoundButton buttonView, boolean isChecked) {
+
+			}
+		};
+
 		drawer = new DrawerBuilder()
 				.withActivity(this)
 				.withHeader(R.layout.drawer_header)
 				.withTranslucentStatusBar(false)
 				.addDrawerItems(
 
-						new PrimaryDrawerItem()
-								.withIdentifier(DRAWER_ITEM_HOME)
-								.withName(R.string.drawer_map_home)
-								.withIcon(R.drawable.map),
+						new ExpandableDrawerItem()
+							.withIdentifier(DRAWER_ITEM_HOME)
+							.withName(R.string.drawer_map_home)
+							.withIcon(R.drawable.map)
+							.withIsExpanded(true)
+							.withSelectable(false)
+							.withIconColor(R.color.material_drawer_hint_icon)
+							.withSelectedIconColor(R.color.primary)
+							.withSetSelected(false)
+							.withSubItems(
+								new SecondarySwitchDrawerItem()
+									.withName(R.string.building_type_academic)
+									.withChecked(true)
+									.withSelectable(false)
+									.withIdentifier(DRAWER_SWITCH_ACADEMIC)
+									.withOnCheckedChangeListener(drawerBuildingSwitchListener)
+									.withLevel(2),
+								new SecondarySwitchDrawerItem()
+									.withName(R.string.building_type_admin)
+									.withChecked(true)
+									.withSelectable(false)
+									.withIdentifier(DRAWER_SWITCH_ADMIN)
+									.withOnCheckedChangeListener(drawerBuildingSwitchListener)
+									.withLevel(2),
+								new SecondarySwitchDrawerItem()
+									.withName(R.string.building_type_athletics)
+									.withChecked(true)
+									.withSelectable(false)
+									.withIdentifier(DRAWER_SWITCH_ATHLETICS)
+									.withOnCheckedChangeListener(drawerBuildingSwitchListener)
+									.withLevel(2),
+								new SecondarySwitchDrawerItem()
+									.withName(R.string.building_type_residential)
+									.withChecked(true)
+									.withSelectable(false)
+									.withIdentifier(DRAWER_SWITCH_RESIDENTIAL)
+									.withOnCheckedChangeListener(drawerBuildingSwitchListener)
+									.withLevel(2),
+								new SecondarySwitchDrawerItem()
+									.withName(R.string.building_type_student)
+									.withChecked(true)
+									.withSelectable(false)
+									.withIdentifier(DRAWER_SWITCH_STUDENT)
+									.withOnCheckedChangeListener(drawerBuildingSwitchListener)
+									.withLevel(2),
+								new SecondarySwitchDrawerItem()
+									.withName(R.string.building_type_support)
+									.withChecked(true)
+									.withSelectable(false)
+									.withIdentifier(DRAWER_SWITCH_SUPPORT)
+									.withOnCheckedChangeListener(drawerBuildingSwitchListener)
+									.withLevel(2)
+								),
 
-						////////// BUILDING TYPE TOGGLES //////////
-						new SecondarySwitchDrawerItem()
-								.withName(R.string.building_type_academic)
-								.withChecked(true)
-								.withSelectable(false)
-								.withIdentifier(DRAWER_SWITCH_ACADEMIC)
-								.withOnCheckedChangeListener(drawerSwitchListener),
-						new SecondarySwitchDrawerItem()
-								.withName(R.string.building_type_admin)
-								.withChecked(true)
-								.withSelectable(false)
-								.withIdentifier(DRAWER_SWITCH_ADMIN)
-								.withOnCheckedChangeListener(drawerSwitchListener),
-						new SecondarySwitchDrawerItem()
-								.withName(R.string.building_type_athletics)
-								.withChecked(true)
-								.withSelectable(false)
-								.withIdentifier(DRAWER_SWITCH_ATHLETICS)
-								.withOnCheckedChangeListener(drawerSwitchListener),
-						new SecondarySwitchDrawerItem()
-								.withName(R.string.building_type_residential)
-								.withChecked(true)
-								.withSelectable(false)
-								.withIdentifier(DRAWER_SWITCH_RESIDENTIAL)
-								.withOnCheckedChangeListener(drawerSwitchListener),
-						new SecondarySwitchDrawerItem()
-								.withName(R.string.building_type_student)
-								.withChecked(true)
-								.withSelectable(false)
-								.withIdentifier(DRAWER_SWITCH_STUDENT)
-								.withOnCheckedChangeListener(drawerSwitchListener),
-						new SecondarySwitchDrawerItem()
-								.withName(R.string.building_type_support)
-								.withChecked(true)
-								.withSelectable(false)
-								.withIdentifier(DRAWER_SWITCH_SUPPORT)
-								.withOnCheckedChangeListener(drawerSwitchListener),
+						new ExpandableBadgeDrawerItem()
+							.withIdentifier(DRAWER_ITEM_TRANSIT)
+							.withName(R.string.drawer_transit)
+							.withIcon(R.drawable.bus)
+							.withSelectable(false)
+							.withIconColor(R.color.material_drawer_hint_icon)
+							.withSelectedIconColor(R.color.primary)
+							.withBadge(R.string.drawer_label_live)
+							.withBadgeStyle(new BadgeStyle()
+								.withTextColor(Color.WHITE)
+								.withColorRes(R.color.md_red_700))
+							.withSubItems(
+								new SecondarySwitchDrawerItem()
+									.withLevel(2)
+									.withIdentifier(DRAWER_SWITCH_TRANSIT_BLUE)
+									.withName(R.string.transit_route_blue)
+									.withSelectable(false)
+									.withOnCheckedChangeListener(drawerTransitSwitchListener),
+								new SecondarySwitchDrawerItem()
+									.withLevel(2)
+									.withIdentifier(DRAWER_SWITCH_TRANSIT_GOLD)
+									.withName(R.string.transit_route_gold)
+									.withSelectable(false)
+									.withOnCheckedChangeListener(drawerTransitSwitchListener),
+								new SecondarySwitchDrawerItem()
+									.withLevel(2)
+									.withIdentifier(DRAWER_SWITCH_TRANSIT_STADIUM)
+									.withName(R.string.transit_route_stadium)
+									.withSelectable(false)
+									.withOnCheckedChangeListener(drawerTransitSwitchListener)
+							),
 
 						new SectionDrawerItem()
-								.withName(R.string.drawer_section_about),
+							.withName(R.string.drawer_section_about),
 
 						new PrimaryDrawerItem()
-								.withIdentifier(DRAWER_ITEM_ABOUT)
-								.withName(R.string.drawer_legal)
-								.withIcon(R.drawable.book),
+							.withIdentifier(DRAWER_ITEM_ABOUT)
+							.withName(R.string.drawer_legal)
+							.withIcon(R.drawable.book)
+							.withSelectable(false),
 						new PrimaryDrawerItem()
-								.withIdentifier(DRAWER_ITEM_GITHUB)
-								.withName(R.string.drawer_github)
-								.withIcon(R.drawable.new_window)
+							.withIdentifier(DRAWER_ITEM_GITHUB)
+							.withName(R.string.drawer_github)
+							.withIcon(R.drawable.new_window)
+							.withSelectable(false)
 				)
 				.withOnDrawerItemClickListener(new Drawer.OnDrawerItemClickListener() {
 					@Override
@@ -291,7 +367,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 								showNotices();
 								break;
 							case DRAWER_ITEM_GITHUB:
-								drawer.setSelection(DRAWER_ITEM_HOME);
+//								drawer.setSelection(DRAWER_ITEM_HOME);
 								Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://github.com/TheRealGitCub/GSCampusMap"));
 								startActivity(browserIntent);
 								break;
@@ -468,6 +544,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		LatLng startPos = new LatLng(START_LAT, START_LNG);
 		mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(startPos, START_ZOOM));
 		mMap.setPadding(0, 230, 0, 0);
+
+		final Handler handler = new Handler();
+		Timer timer  = new Timer();
+
+		TimerTask runTransitUpdate = new TimerTask() {
+			@Override
+			public void run() {
+				handler.post(new Runnable() {
+					@Override
+					public void run() {
+						RetrieveTransitLater transit = new RetrieveTransitLater();
+						transit.execute();
+					}
+				});
+			}
+		};
+
+		timer.schedule(runTransitUpdate, 0, TRANSIT_UPDATE_MILLISECONDS);
 
 		buildings = parseBuildings();
 
@@ -878,7 +972,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 		fragment.show(getSupportFragmentManager(), null);
 
-		drawer.setSelection(DRAWER_ITEM_HOME);
+//		drawer.setSelection(DRAWER_ITEM_HOME);
 
 
 	}
@@ -906,6 +1000,103 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 			}
 		});
+	}
+
+	class RetrieveTransitLater extends AsyncTask<String, Void, String> {
+
+		String busJSON;
+
+		@Override
+		protected String doInBackground(String... strings) {
+			try {
+				busJSON = readUrl(res.getString(R.string.transit_data_url));
+
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			return null;
+		}
+
+		@Override
+		protected void onPostExecute(String s) {
+			super.onPostExecute(s);
+
+			Gson gson = new Gson();
+			Bus[] buses = gson.fromJson(busJSON, Bus[].class);
+
+			if (liveBuses == null) {
+				liveBuses = new ArrayMap<>();
+			}
+
+			for (Bus bus : buses) {
+				if (!liveBuses.containsKey(bus.id)) {
+					MarkerOptions newMarker = new MarkerOptions()
+							.position(new LatLng(bus.locationLat, bus.locationLng))
+							.title(bus.route + " - " + bus.title)
+							.snippet(String.format(res.getString(R.string.bus_heading), bus.heading, bus.speed));
+					switch (bus.route) {
+						case "Gold":
+							newMarker.icon(getMarkerIconFromDrawable(getDrawable(R.drawable.bus_gold)));
+							break;
+						case "Blue":
+							newMarker.icon(getMarkerIconFromDrawable(getDrawable(R.drawable.bus_blue)));
+							break;
+						case "Stadium Express":
+							newMarker.icon(getMarkerIconFromDrawable(getDrawable(R.drawable.bus_stadium)));
+							break;
+					}
+					Marker newBus = mMap.addMarker(newMarker);
+					liveBuses.put(bus.id, newBus);
+				}
+				else {
+					Marker marker = liveBuses.get(bus.id);
+					marker.setPosition(new LatLng(bus.locationLat, bus.locationLng));
+					marker.setSnippet(String.format(res.getString(R.string.bus_heading), bus.heading, bus.speed));
+
+				}
+			}
+
+		}
+
+		// http://stackoverflow.com/a/7467629/1465353
+		private String readUrl(String urlString) throws Exception {
+			BufferedReader reader = null;
+			try {
+				URL url = new URL(urlString);
+				reader = new BufferedReader(new InputStreamReader(url.openStream()));
+				StringBuffer buffer = new StringBuffer();
+				int read;
+				char[] chars = new char[1024];
+				while ((read = reader.read(chars)) != -1)
+					buffer.append(chars, 0, read);
+
+				return buffer.toString();
+			} finally {
+				if (reader != null)
+					reader.close();
+			}
+		}
+
+		class Bus {
+			String heading;
+			String id;
+			String locationAddress;
+			float locationLat;
+			float locationLng;
+			String route;
+			int speed;
+			String title;
+			int updated;
+		}
+
+		private BitmapDescriptor getMarkerIconFromDrawable(Drawable drawable) {
+			Canvas canvas = new Canvas();
+			Bitmap bitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
+			canvas.setBitmap(bitmap);
+			drawable.setBounds(0, 0, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight());
+			drawable.draw(canvas);
+			return BitmapDescriptorFactory.fromBitmap(bitmap);
+		}
 	}
 
 

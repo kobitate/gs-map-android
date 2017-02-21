@@ -13,7 +13,7 @@
 
     <string name="building_number">Building #%1$s</string>
 
-    <string name="drawer_map_home">Map Home</string>
+    <string name="drawer_map_home">Buildings</string>
     <string name="drawer_section_about">About App</string>
     <string name="drawer_legal">Legal Notices</string>
     <string name="drawer_github">Source Code on GitHub</string>
@@ -25,5 +25,12 @@
     <string name="info_walking_directions">Get Walking Directions</string>
     <string name="directions_error">Something went wrong retrieving directions</string>
     <string name="directions_no_location">Finding location. Please wait and try again.</string>
+    <string name="drawer_transit">Transit</string>
+    <string name="transit_route_blue" translatable="false">Blue Route</string>
+    <string name="transit_route_gold" translatable="false">Gold Route</string>
+    <string name="transit_route_stadium" translatable="false">Stadium Express</string>
+    <string name="drawer_label_live">Live</string>
+    <string name="transit_data_url" translatable="false">http://gsu.kobitate.com/buses.php</string>
+    <string name="bus_heading">Heading %1$s at %2$d mph</string>
 
 </resources>

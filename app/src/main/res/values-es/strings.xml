@@ -11,7 +11,7 @@
     <string name="search_placeholder">Buscar</string>
     <string name="title_activity_maps">Mapa</string>
 
-    <string name="drawer_map_home">Mapa</string>
+    <string name="drawer_map_home">Edificios</string>
     <string name="drawer_section_about">Sobre App</string>
     <string name="drawer_legal">Avisos Legales</string>
     <string name="drawer_github">Código Fuente en GitHub</string>
@@ -21,4 +21,7 @@
     <string name="info_walking_directions">Indicaciones a Pie</string>
     <string name="directions_error">Ha ocurrido un error recuperando sus indicaciones</string>
     <string name="directions_no_location">Buscando dirección. Por favor espere y inténtalo otra vez.</string>
+    <string name="drawer_transit">Transporte</string>
+    <string name="drawer_label_live">En Vivo</string>
+    <string name="bus_heading">Moviendo %1$s a %2$d mph</string>
 </resources>

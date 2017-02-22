@@ -32,5 +32,6 @@
     <string name="drawer_label_live">Live</string>
     <string name="transit_data_url" translatable="false">http://gsu.kobitate.com/buses.php</string>
     <string name="bus_heading">Heading %1$s at %2$d mph</string>
+    <string name="finding_buses">Finding Buses...</string>
 
 </resources>

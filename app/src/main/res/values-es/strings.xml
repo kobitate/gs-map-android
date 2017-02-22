@@ -24,4 +24,5 @@
     <string name="drawer_transit">Transporte</string>
     <string name="drawer_label_live">En Vivo</string>
     <string name="bus_heading">Moviendo %1$s a %2$d mph</string>
+    <string name="finding_buses">Buscando Autobuses...</string>
 </resources>

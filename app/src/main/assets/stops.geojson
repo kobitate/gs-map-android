@@ -1,0 +1,15 @@
+{
+"type": "FeatureCollection",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+                                                                                                                                  
+"features": [
+{ "type": "Feature", "properties": { "Name": "Stadium", "Description": "Services Gold Route and Stadium Express" }, "geometry": { "type": "Point", "coordinates": [ -81.784626, 32.413336, 0.0 ] } },
+{ "type": "Feature", "properties": { "Name": "Cambridge Apts", "Description": "Services Blue Route" }, "geometry": { "type": "Point", "coordinates": [ -81.780247, 32.41521, 0.0 ] } },
+{ "type": "Feature", "properties": { "Name": "Eagle Village \/ Kennedy", "Description": "Services Blue Route" }, "geometry": { "type": "Point", "coordinates": [ -81.777348, 32.418789, 0.0 ] } },
+{ "type": "Feature", "properties": { "Name": "Bookstore", "Description": "Services Blue Route and Gold Route" }, "geometry": { "type": "Point", "coordinates": [ -81.779922, 32.424313, 0.0 ] } },
+{ "type": "Feature", "properties": { "Name": "Cedarwood Drive (Counseling\/Health)", "Description": "Services Blue Route and Gold Route" }, "geometry": { "type": "Point", "coordinates": [ -81.783602, 32.422036, 0.0 ] } },
+{ "type": "Feature", "properties": { "Name": "Technology", "Description": "Services Blue Route and Gold Route" }, "geometry": { "type": "Point", "coordinates": [ -81.785536, 32.420936, 0.0 ] } },
+{ "type": "Feature", "properties": { "Name": "RAC", "Description": "Services Gold Route" }, "geometry": { "type": "Point", "coordinates": [ -81.792398, 32.41607, 0.0 ] } },
+{ "type": "Feature", "properties": { "Name": "College of Education \/ Nursing-Chemistry", "Description": "Services Stadium Express" }, "geometry": { "type": "Point", "coordinates": [ -81.788153, 32.42142, 0.0 ] } }
+]
+}

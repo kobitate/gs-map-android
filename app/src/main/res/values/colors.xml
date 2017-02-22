@@ -11,4 +11,8 @@
     <color name="mapResidential">#EA8651</color>
     <color name="mapStudent">#C2B63C</color>
     <color name="mapSupport">#BE8AE2</color>
+
+    <color name="busStadium">#E84D4F</color>
+    <color name="busBlue">#50CCFD</color>
+    <color name="busGold">#FED151</color>
 </resources>

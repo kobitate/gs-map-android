@@ -1,6 +1,8 @@
 package com.kobitate.gscampusmap;
 
 import android.Manifest;
+import android.animation.ObjectAnimator;
+import android.animation.TypeEvaluator;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -28,6 +30,7 @@ import android.text.Editable;
 import android.text.Html;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.util.Property;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
@@ -173,6 +176,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private Polyline		 	directionsLine;
 	private Location 			currentLocation;
 
+	private Handler 			transitHandler;
+	private Timer 				transitTimer;
+	private TimerTask 			transitTimerTask;
+	private boolean 			transitTimerRunning = false;
+	private int					transitCheckedCount = 0;
+
+	private ArrayMap<Integer, Boolean> transitCheckedStatus;
+	private ArrayMap<String, JSONObject> transitLayers;
+	private ArrayMap<String, Polyline> transitLines;
+	private ArrayList<Marker> transitStops;
+
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -203,6 +218,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		polygonCategories.put("residential", 	new ArrayList<Polygon>());
 		polygonCategories.put("student", 		new ArrayList<Polygon>());
 		polygonCategories.put("support", 		new ArrayList<Polygon>());
+
+		transitHandler = new Handler();
+		transitTimer = new Timer();
+
+		transitTimerTask = new TimerTask() {
+			@Override
+			public void run() {
+				transitHandler.post(new Runnable() {
+					@Override
+					public void run() {
+						if (transitTimerRunning) {
+							RetrieveTransitLayer transit = new RetrieveTransitLayer();
+							transit.execute();
+						}
+					}
+				});
+			}
+		};
+
+		transitTimer.schedule(transitTimerTask, 0, TRANSIT_UPDATE_MILLISECONDS);
+
+		transitLines = new ArrayMap<>();
+		transitStops = new ArrayList<>();
+
+		transitCheckedStatus = new ArrayMap<>();
+		transitCheckedStatus.put(DRAWER_SWITCH_TRANSIT_BLUE, false);
+		transitCheckedStatus.put(DRAWER_SWITCH_TRANSIT_GOLD, false);
+		transitCheckedStatus.put(DRAWER_SWITCH_TRANSIT_STADIUM, false);
 
 	}
 
@@ -246,7 +289,71 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		OnCheckedChangeListener drawerTransitSwitchListener = new OnCheckedChangeListener() {
 			@Override
 			public void onCheckedChanged(IDrawerItem drawerItem, CompoundButton buttonView, boolean isChecked) {
+				if (isChecked) {
+					transitCheckedCount++;
+				}
+				else {
+					transitCheckedCount--;
+				}
+				
+				if (transitCheckedCount == 1) {
+					Toast.makeText(MapsActivity.this, getString(R.string.finding_buses), Toast.LENGTH_SHORT).show();
+				}
 
+				String routeName = "";
+
+				switch ((int) drawerItem.getIdentifier()) {
+					case DRAWER_SWITCH_TRANSIT_BLUE:
+						routeName = "Blue";
+						transitLines.get("blue").setVisible(isChecked);
+						break;
+					case DRAWER_SWITCH_TRANSIT_GOLD:
+						routeName = "Gold";
+						transitLines.get("gold").setVisible(isChecked);
+						break;
+					case DRAWER_SWITCH_TRANSIT_STADIUM:
+						routeName = "Stadium Express";
+						transitLines.get("stadium").setVisible(isChecked);
+						break;
+				}
+
+				if (transitTimerRunning && liveBuses != null) {
+					for (ArrayMap.Entry<String, Marker> m : liveBuses.entrySet()) {
+						if (m.getValue().getTitle().contains(routeName)) {
+							m.getValue().setVisible(isChecked);
+						}
+
+					}
+				}
+
+				if (!transitTimerRunning && transitCheckedCount > 0) {
+					transitTimerRunning = true;
+				}
+				else if (transitTimerRunning && transitCheckedCount == 0) {
+					transitTimerRunning = false;
+				}
+
+				transitCheckedStatus.put((int) drawerItem.getIdentifier(), isChecked);
+
+
+
+				for (Marker marker : transitStops) {
+					if (marker.getSnippet().contains("Blue")) {
+						if (!(marker.getSnippet().contains("Gold") && transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_GOLD))) {
+							marker.setVisible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_BLUE));
+						}
+					}
+					if (marker.getSnippet().contains("Gold")) {
+						if (!(marker.getSnippet().contains("Blue") && transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_BLUE))) {
+							marker.setVisible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_GOLD));
+						}
+					}
+					if (marker.getSnippet().contains("Stadium")) {
+						if (!(marker.getSnippet().contains("Gold") && transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_GOLD))) {
+							marker.setVisible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_STADIUM));
+						}
+					}
+				}
 			}
 		};
 
@@ -255,106 +362,105 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				.withHeader(R.layout.drawer_header)
 				.withTranslucentStatusBar(false)
 				.addDrawerItems(
-
-						new ExpandableDrawerItem()
-							.withIdentifier(DRAWER_ITEM_HOME)
-							.withName(R.string.drawer_map_home)
-							.withIcon(R.drawable.map)
-							.withIsExpanded(true)
-							.withSelectable(false)
-							.withIconColor(R.color.material_drawer_hint_icon)
-							.withSelectedIconColor(R.color.primary)
-							.withSetSelected(false)
-							.withSubItems(
-								new SecondarySwitchDrawerItem()
-									.withName(R.string.building_type_academic)
-									.withChecked(true)
-									.withSelectable(false)
-									.withIdentifier(DRAWER_SWITCH_ACADEMIC)
-									.withOnCheckedChangeListener(drawerBuildingSwitchListener)
-									.withLevel(2),
-								new SecondarySwitchDrawerItem()
-									.withName(R.string.building_type_admin)
-									.withChecked(true)
-									.withSelectable(false)
-									.withIdentifier(DRAWER_SWITCH_ADMIN)
-									.withOnCheckedChangeListener(drawerBuildingSwitchListener)
-									.withLevel(2),
-								new SecondarySwitchDrawerItem()
-									.withName(R.string.building_type_athletics)
-									.withChecked(true)
-									.withSelectable(false)
-									.withIdentifier(DRAWER_SWITCH_ATHLETICS)
-									.withOnCheckedChangeListener(drawerBuildingSwitchListener)
-									.withLevel(2),
-								new SecondarySwitchDrawerItem()
-									.withName(R.string.building_type_residential)
-									.withChecked(true)
-									.withSelectable(false)
-									.withIdentifier(DRAWER_SWITCH_RESIDENTIAL)
-									.withOnCheckedChangeListener(drawerBuildingSwitchListener)
-									.withLevel(2),
-								new SecondarySwitchDrawerItem()
-									.withName(R.string.building_type_student)
-									.withChecked(true)
-									.withSelectable(false)
-									.withIdentifier(DRAWER_SWITCH_STUDENT)
-									.withOnCheckedChangeListener(drawerBuildingSwitchListener)
-									.withLevel(2),
-								new SecondarySwitchDrawerItem()
-									.withName(R.string.building_type_support)
-									.withChecked(true)
-									.withSelectable(false)
-									.withIdentifier(DRAWER_SWITCH_SUPPORT)
-									.withOnCheckedChangeListener(drawerBuildingSwitchListener)
-									.withLevel(2)
-								),
-
-						new ExpandableBadgeDrawerItem()
-							.withIdentifier(DRAWER_ITEM_TRANSIT)
-							.withName(R.string.drawer_transit)
-							.withIcon(R.drawable.bus)
-							.withSelectable(false)
-							.withIconColor(R.color.material_drawer_hint_icon)
-							.withSelectedIconColor(R.color.primary)
-							.withBadge(R.string.drawer_label_live)
-							.withBadgeStyle(new BadgeStyle()
-								.withTextColor(Color.WHITE)
-								.withColorRes(R.color.md_red_700))
-							.withSubItems(
-								new SecondarySwitchDrawerItem()
-									.withLevel(2)
-									.withIdentifier(DRAWER_SWITCH_TRANSIT_BLUE)
-									.withName(R.string.transit_route_blue)
-									.withSelectable(false)
-									.withOnCheckedChangeListener(drawerTransitSwitchListener),
-								new SecondarySwitchDrawerItem()
-									.withLevel(2)
-									.withIdentifier(DRAWER_SWITCH_TRANSIT_GOLD)
-									.withName(R.string.transit_route_gold)
-									.withSelectable(false)
-									.withOnCheckedChangeListener(drawerTransitSwitchListener),
-								new SecondarySwitchDrawerItem()
-									.withLevel(2)
-									.withIdentifier(DRAWER_SWITCH_TRANSIT_STADIUM)
-									.withName(R.string.transit_route_stadium)
-									.withSelectable(false)
-									.withOnCheckedChangeListener(drawerTransitSwitchListener)
+					new ExpandableDrawerItem()
+						.withIdentifier(DRAWER_ITEM_HOME)
+						.withName(R.string.drawer_map_home)
+						.withIcon(R.drawable.map)
+						.withIsExpanded(true)
+						.withSelectable(false)
+						.withIconColor(R.color.material_drawer_hint_icon)
+						.withSelectedIconColor(R.color.primary)
+						.withSetSelected(false)
+						.withSubItems(
+							new SecondarySwitchDrawerItem()
+								.withName(R.string.building_type_academic)
+								.withChecked(true)
+								.withSelectable(false)
+								.withIdentifier(DRAWER_SWITCH_ACADEMIC)
+								.withOnCheckedChangeListener(drawerBuildingSwitchListener)
+								.withLevel(2),
+							new SecondarySwitchDrawerItem()
+								.withName(R.string.building_type_admin)
+								.withChecked(true)
+								.withSelectable(false)
+								.withIdentifier(DRAWER_SWITCH_ADMIN)
+								.withOnCheckedChangeListener(drawerBuildingSwitchListener)
+								.withLevel(2),
+							new SecondarySwitchDrawerItem()
+								.withName(R.string.building_type_athletics)
+								.withChecked(true)
+								.withSelectable(false)
+								.withIdentifier(DRAWER_SWITCH_ATHLETICS)
+								.withOnCheckedChangeListener(drawerBuildingSwitchListener)
+								.withLevel(2),
+							new SecondarySwitchDrawerItem()
+								.withName(R.string.building_type_residential)
+								.withChecked(true)
+								.withSelectable(false)
+								.withIdentifier(DRAWER_SWITCH_RESIDENTIAL)
+								.withOnCheckedChangeListener(drawerBuildingSwitchListener)
+								.withLevel(2),
+							new SecondarySwitchDrawerItem()
+								.withName(R.string.building_type_student)
+								.withChecked(true)
+								.withSelectable(false)
+								.withIdentifier(DRAWER_SWITCH_STUDENT)
+								.withOnCheckedChangeListener(drawerBuildingSwitchListener)
+								.withLevel(2),
+							new SecondarySwitchDrawerItem()
+								.withName(R.string.building_type_support)
+								.withChecked(true)
+								.withSelectable(false)
+								.withIdentifier(DRAWER_SWITCH_SUPPORT)
+								.withOnCheckedChangeListener(drawerBuildingSwitchListener)
+								.withLevel(2)
 							),
 
-						new SectionDrawerItem()
-							.withName(R.string.drawer_section_about),
+					new ExpandableBadgeDrawerItem()
+						.withIdentifier(DRAWER_ITEM_TRANSIT)
+						.withName(R.string.drawer_transit)
+						.withIcon(R.drawable.bus)
+						.withSelectable(false)
+						.withIconColor(R.color.material_drawer_hint_icon)
+						.withSelectedIconColor(R.color.primary)
+						.withBadge(R.string.drawer_label_live)
+						.withBadgeStyle(new BadgeStyle()
+							.withTextColor(Color.WHITE)
+							.withColorRes(R.color.md_red_700))
+						.withSubItems(
+							new SecondarySwitchDrawerItem()
+								.withLevel(2)
+								.withIdentifier(DRAWER_SWITCH_TRANSIT_BLUE)
+								.withName(R.string.transit_route_blue)
+								.withSelectable(false)
+								.withOnCheckedChangeListener(drawerTransitSwitchListener),
+							new SecondarySwitchDrawerItem()
+								.withLevel(2)
+								.withIdentifier(DRAWER_SWITCH_TRANSIT_GOLD)
+								.withName(R.string.transit_route_gold)
+								.withSelectable(false)
+								.withOnCheckedChangeListener(drawerTransitSwitchListener),
+							new SecondarySwitchDrawerItem()
+								.withLevel(2)
+								.withIdentifier(DRAWER_SWITCH_TRANSIT_STADIUM)
+								.withName(R.string.transit_route_stadium)
+								.withSelectable(false)
+								.withOnCheckedChangeListener(drawerTransitSwitchListener)
+						),
 
-						new PrimaryDrawerItem()
-							.withIdentifier(DRAWER_ITEM_ABOUT)
-							.withName(R.string.drawer_legal)
-							.withIcon(R.drawable.book)
-							.withSelectable(false),
-						new PrimaryDrawerItem()
-							.withIdentifier(DRAWER_ITEM_GITHUB)
-							.withName(R.string.drawer_github)
-							.withIcon(R.drawable.new_window)
-							.withSelectable(false)
+					new SectionDrawerItem()
+						.withName(R.string.drawer_section_about),
+
+					new PrimaryDrawerItem()
+						.withIdentifier(DRAWER_ITEM_ABOUT)
+						.withName(R.string.drawer_legal)
+						.withIcon(R.drawable.book)
+						.withSelectable(false),
+					new PrimaryDrawerItem()
+						.withIdentifier(DRAWER_ITEM_GITHUB)
+						.withName(R.string.drawer_github)
+						.withIcon(R.drawable.new_window)
+						.withSelectable(false)
 				)
 				.withOnDrawerItemClickListener(new Drawer.OnDrawerItemClickListener() {
 					@Override
@@ -378,6 +484,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				.build();
 
 		drawer.getDrawerLayout().setFitsSystemWindows(false);
+		drawer.deselect();
 
 	}
 
@@ -544,31 +651,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		LatLng startPos = new LatLng(START_LAT, START_LNG);
 		mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(startPos, START_ZOOM));
 		mMap.setPadding(0, 230, 0, 0);
+		mMap.getUiSettings().setMapToolbarEnabled(false);
 
-		final Handler handler = new Handler();
-		Timer timer  = new Timer();
+		buildings = parse("buildings.json");
 
-		TimerTask runTransitUpdate = new TimerTask() {
-			@Override
-			public void run() {
-				handler.post(new Runnable() {
-					@Override
-					public void run() {
-						RetrieveTransitLater transit = new RetrieveTransitLater();
-						transit.execute();
-					}
-				});
-			}
-		};
+		transitLayers = new ArrayMap<>();
 
-		timer.schedule(runTransitUpdate, 0, TRANSIT_UPDATE_MILLISECONDS);
-
-		buildings = parseBuildings();
+		transitLayers.put("blue", parse("blue.geojson"));
+		transitLayers.put("gold", parse("gold.geojson"));
+		transitLayers.put("stadium", parse("stadium.geojson"));
+		transitLayers.put("stops", parse("stops.geojson"));
 
 		try {
 			addPolygons();
+			addTransit();
 		} catch (JSONException e) {
-			Log.e(getString(R.string.app_name), "Error adding buildings");
+			Log.e(getString(R.string.app_name), "Error adding buildings or transit");
 			e.printStackTrace();
 		}
 
@@ -585,10 +683,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 	// Function from Stack Overflow, CC BY-SA 3.0
 	// Source: http://stackoverflow.com/a/19945484/1465353
-	private JSONObject parseBuildings() {
+	private JSONObject parse(String fileName) {
 		String json;
 		try {
-			InputStream in = getAssets().open("buildings.json");
+			InputStream in = getAssets().open(fileName);
 			int size = in.available();
 			byte[] buffer = new byte[size];
 			//noinspection ResultOfMethodCallIgnored
@@ -684,6 +782,69 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				clearSearchFocus();
 			}
 		});
+	}
+
+	private void addTransit() throws JSONException {
+		for (ArrayMap.Entry<String, JSONObject> layer : transitLayers.entrySet()) {
+			String route = layer.getKey();
+			JSONObject data = layer.getValue();
+
+			JSONArray features = data.getJSONArray("features");
+
+			for (int i = 0; i < features.length(); i++) {
+				JSONObject feature = features.getJSONObject(i);
+				JSONObject geometry = feature.getJSONObject("geometry");
+
+				if (geometry.getString("type").equals("LineString")) {
+					JSONArray coords = geometry.getJSONArray("coordinates");
+					PolylineOptions routeLine = new PolylineOptions();
+
+
+					for (int j = 0; j < coords.length(); j++) {
+						JSONArray coordsArray = coords.getJSONArray(j);
+						LatLng point = new LatLng(coordsArray.getDouble(1), coordsArray.getDouble(0));
+						routeLine.add(point);
+					}
+
+					switch (route) {
+						case "blue":
+							routeLine.color(ContextCompat.getColor(getApplicationContext(), R.color.busBlue));
+							routeLine.width(10f);
+							break;
+						case "gold":
+							routeLine.color(ContextCompat.getColor(getApplicationContext(), R.color.busGold));
+							routeLine.width(5f);
+							break;
+						case "stadium":
+							routeLine.color(ContextCompat.getColor(getApplicationContext(), R.color.busStadium));
+							routeLine.width(10f);
+							break;
+					}
+
+					routeLine.visible(false);
+
+					Polyline polyline = mMap.addPolyline(routeLine);
+					transitLines.put(route, polyline);
+				}
+				else if (feature.getJSONObject("geometry").getString("type").equals("Point")) {
+					MarkerOptions stopMarker = new MarkerOptions();
+
+					JSONArray coordsArray = geometry.getJSONArray("coordinates");
+					LatLng point = new LatLng(coordsArray.getDouble(1), coordsArray.getDouble(0));
+
+					stopMarker.icon(getMarkerIconFromDrawable(getDrawable(R.drawable.map_marker_circle)))
+							.title(feature.getJSONObject("properties").getString("Name"))
+							.snippet(feature.getJSONObject("properties").getString("Description"))
+							.position(point)
+							.visible(false);
+
+					Marker marker = mMap.addMarker(stopMarker);
+					transitStops.add(marker);
+				}
+
+			}
+		}
+
 	}
 
 	@Override
@@ -1002,7 +1163,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		});
 	}
 
-	class RetrieveTransitLater extends AsyncTask<String, Void, String> {
+	class RetrieveTransitLayer extends AsyncTask<String, Void, String> {
 
 		String busJSON;
 
@@ -1021,38 +1182,54 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		protected void onPostExecute(String s) {
 			super.onPostExecute(s);
 
-			Gson gson = new Gson();
-			Bus[] buses = gson.fromJson(busJSON, Bus[].class);
+			if (transitCheckedCount > 0) {
 
-			if (liveBuses == null) {
-				liveBuses = new ArrayMap<>();
-			}
+				Gson gson = new Gson();
+				Bus[] buses = gson.fromJson(busJSON, Bus[].class);
 
-			for (Bus bus : buses) {
-				if (!liveBuses.containsKey(bus.id)) {
-					MarkerOptions newMarker = new MarkerOptions()
-							.position(new LatLng(bus.locationLat, bus.locationLng))
-							.title(bus.route + " - " + bus.title)
-							.snippet(String.format(res.getString(R.string.bus_heading), bus.heading, bus.speed));
-					switch (bus.route) {
-						case "Gold":
-							newMarker.icon(getMarkerIconFromDrawable(getDrawable(R.drawable.bus_gold)));
-							break;
-						case "Blue":
-							newMarker.icon(getMarkerIconFromDrawable(getDrawable(R.drawable.bus_blue)));
-							break;
-						case "Stadium Express":
-							newMarker.icon(getMarkerIconFromDrawable(getDrawable(R.drawable.bus_stadium)));
-							break;
-					}
-					Marker newBus = mMap.addMarker(newMarker);
-					liveBuses.put(bus.id, newBus);
+				if (liveBuses == null) {
+					liveBuses = new ArrayMap<>();
 				}
-				else {
-					Marker marker = liveBuses.get(bus.id);
-					marker.setPosition(new LatLng(bus.locationLat, bus.locationLng));
-					marker.setSnippet(String.format(res.getString(R.string.bus_heading), bus.heading, bus.speed));
 
+				for (Bus bus : buses) {
+					if (!liveBuses.containsKey(bus.id)) {
+						MarkerOptions newMarker = new MarkerOptions()
+								.position(new LatLng(bus.locationLat, bus.locationLng))
+								.title(bus.route + " - " + bus.title)
+								.snippet(String.format(res.getString(R.string.bus_heading), bus.heading, bus.speed));
+						switch (bus.route) {
+							case "Gold":
+								newMarker.icon(getMarkerIconFromDrawable(getDrawable(R.drawable.bus_gold)));
+								newMarker.visible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_GOLD));
+								break;
+							case "Blue":
+								newMarker.icon(getMarkerIconFromDrawable(getDrawable(R.drawable.bus_blue)));
+								newMarker.visible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_BLUE));
+								break;
+							case "Stadium Express":
+								newMarker.icon(getMarkerIconFromDrawable(getDrawable(R.drawable.bus_stadium)));
+								newMarker.visible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_STADIUM));
+								break;
+						}
+						Marker newBus = mMap.addMarker(newMarker);
+						liveBuses.put(bus.id, newBus);
+					} else {
+						Marker marker = liveBuses.get(bus.id);
+//					marker.setPosition(new LatLng(bus.locationLat, bus.locationLng));
+						moveMarker(marker, new LatLng(bus.locationLat, bus.locationLng), new LatLngInterpolator.LinearFixed());
+						marker.setSnippet(String.format(res.getString(R.string.bus_heading), bus.heading, bus.speed));
+
+						if (marker.getTitle().contains("Blue")) {
+							marker.setVisible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_BLUE));
+						}
+						else if (marker.getTitle().contains("Gold")) {
+							marker.setVisible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_GOLD));
+						}
+						else if (marker.getTitle().contains("Stadium")) {
+							marker.setVisible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_STADIUM));
+						}
+
+					}
 				}
 			}
 
@@ -1089,16 +1266,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			int updated;
 		}
 
-		private BitmapDescriptor getMarkerIconFromDrawable(Drawable drawable) {
-			Canvas canvas = new Canvas();
-			Bitmap bitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
-			canvas.setBitmap(bitmap);
-			drawable.setBounds(0, 0, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight());
-			drawable.draw(canvas);
-			return BitmapDescriptorFactory.fromBitmap(bitmap);
+
+		private void moveMarker(Marker marker, LatLng finalPosition, final LatLngInterpolator latLngInterpolator) {
+			TypeEvaluator<LatLng> typeEvaluator = new TypeEvaluator<LatLng>() {
+				@Override
+				public LatLng evaluate(float fraction, LatLng startValue, LatLng endValue) {
+					return latLngInterpolator.interpolate(fraction, startValue, endValue);
+				}
+			};
+			Property<Marker, LatLng> property = Property.of(Marker.class, LatLng.class, "position");
+			ObjectAnimator animator = ObjectAnimator.ofObject(marker, property, typeEvaluator, finalPosition);
+			animator.setDuration(TRANSIT_UPDATE_MILLISECONDS / 2);
+			animator.start();
 		}
 	}
 
+	private BitmapDescriptor getMarkerIconFromDrawable(Drawable drawable) {
+		Canvas canvas = new Canvas();
+		Bitmap bitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
+		canvas.setBitmap(bitmap);
+		drawable.setBounds(0, 0, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight());
+		drawable.draw(canvas);
+		return BitmapDescriptorFactory.fromBitmap(bitmap);
+	}
 
 
 }

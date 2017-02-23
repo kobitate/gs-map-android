@@ -25,4 +25,6 @@
     <string name="drawer_label_live">En Vivo</string>
     <string name="bus_heading">Moviendo %1$s a %2$d mph</string>
     <string name="finding_buses">Buscando Autobuses...</string>
+    <string name="dialog_transit_offline_title">Datos de Transporte Desconectado</string>
+    <string name="dialog_transit_offline_message">Lo ciento, el información en vivo de los autobuses está desconectado. Por favor inténtalo más tarde. Información de las paradas y las routas todavía funciona.</string>
 </resources>

@@ -33,5 +33,7 @@
     <string name="transit_data_url" translatable="false">http://gsu.kobitate.com/buses.php</string>
     <string name="bus_heading">Heading %1$s at %2$d mph</string>
     <string name="finding_buses">Finding Buses...</string>
+    <string name="dialog_transit_offline_title">Transit Data Offline</string>
+    <string name="dialog_transit_offline_message">Sorry, the live bus information server is currently offline. Please try again later. Stop and Route information will still be displayed.</string>
 
 </resources>

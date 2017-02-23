@@ -446,6 +446,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		drawer.getDrawerLayout().setFitsSystemWindows(false);
 		drawer.deselect();
 
+		new CheckBusDataConnection().execute();
+
+
 	}
 
 	private void setupMap() {
@@ -1181,10 +1184,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		protected void onPostExecute(String s) {
 			super.onPostExecute(s);
 
-			if (transitCheckedCount > 0) {
+			Gson gson = new Gson();
+			Bus[] buses = gson.fromJson(busJSON, Bus[].class);
 
-				Gson gson = new Gson();
-				Bus[] buses = gson.fromJson(busJSON, Bus[].class);
+			if (buses.length == 0 && !transitOfflineAlertShown) {
+				transitOfflineAlertShown = true;
+				new AlertDialog.Builder(new ContextThemeWrapper(MapsActivity.this, R.style.DialogTheme))
+					.setTitle(R.string.dialog_transit_offline_title)
+					.setMessage(R.string.dialog_transit_offline_message)
+					.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialogInterface, int i) {
+
+						}
+					})
+					.show();
+			}
+			else if (transitCheckedCount > 0) {
 
 				if (liveBuses == null) {
 					liveBuses = new ArrayMap<>();
@@ -1279,6 +1295,67 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			ObjectAnimator animator = ObjectAnimator.ofObject(marker, property, typeEvaluator, finalPosition);
 			animator.setDuration(TRANSIT_UPDATE_MILLISECONDS / 2);
 			animator.start();
+		}
+	}
+
+	class CheckBusDataConnection extends AsyncTask<String, Void, String> {
+
+		String busJSON;
+
+		@Override
+		protected String doInBackground(String... strings) {
+			try {
+				busJSON = readUrl(res.getString(R.string.transit_data_url));
+
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			return null;
+		}
+
+		@Override
+		protected void onPostExecute(String s) {
+			super.onPostExecute(s);
+
+			Gson gson = new Gson();
+			Bus[] buses = gson.fromJson(busJSON, Bus[].class);
+
+			if (buses.length == 0) {
+				drawer.updateBadge(DRAWER_ITEM_TRANSIT, new StringHolder(null));
+			}
+
+		}
+
+		@SuppressWarnings("unused")
+		class Bus {
+			String heading;
+			String id;
+			String locationAddress;
+			float locationLat;
+			float locationLng;
+			String route;
+			int speed;
+			String title;
+			int updated;
+		}
+
+		// http://stackoverflow.com/a/7467629/1465353
+		private String readUrl(String urlString) throws Exception {
+			BufferedReader reader = null;
+			try {
+				URL url = new URL(urlString);
+				reader = new BufferedReader(new InputStreamReader(url.openStream()));
+				StringBuilder buffer = new StringBuilder();
+				int read;
+				char[] chars = new char[1024];
+				while ((read = reader.read(chars)) != -1)
+					buffer.append(chars, 0, read);
+
+				return buffer.toString();
+			} finally {
+				if (reader != null)
+					reader.close();
+			}
 		}
 	}
 

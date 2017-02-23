@@ -1127,7 +1127,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				"Google Inc.",
 				new GoogleAPILicenseInfo()
 		));
-
+		notices.addNotice(new Notice(
+				"Google Maps Android API utility library",
+				"https://github.com/googlemaps/android-maps-utils",
+				"Google Inc.",
+				new ApacheSoftwareLicense20()
+		));
+		notices.addNotice(new Notice(
+				"Gson",
+				"https://github.com/google/gson",
+				"Google Inc.",
+				new ApacheSoftwareLicense20()
+		));
 		final LicensesDialogFragment fragment = new LicensesDialogFragment.Builder(this)
 				.setNotices(notices)
 				.setShowFullLicenseText(false)
@@ -1269,7 +1280,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				}
 			}
 		}
-		
+
 		@SuppressWarnings("unused")
 		class Bus {
 			String heading;

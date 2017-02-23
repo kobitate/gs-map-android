@@ -4,6 +4,7 @@ import android.Manifest;
 import android.animation.ObjectAnimator;
 import android.animation.TypeEvaluator;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -24,6 +25,8 @@ import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.util.ArrayMap;
+import android.support.v7.app.AlertDialog;
+import android.support.v7.view.ContextThemeWrapper;
 import android.support.v7.widget.AppCompatImageView;
 import android.support.v7.widget.CardView;
 import android.text.Editable;
@@ -56,8 +59,6 @@ import com.algolia.search.saas.Index;
 import com.algolia.search.saas.Query;
 import com.flipboard.bottomsheet.BottomSheetLayout;
 import com.flipboard.bottomsheet.OnSheetDismissedListener;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -76,6 +77,7 @@ import com.google.gson.Gson;
 import com.mikepenz.materialdrawer.Drawer;
 import com.mikepenz.materialdrawer.DrawerBuilder;
 import com.mikepenz.materialdrawer.holder.BadgeStyle;
+import com.mikepenz.materialdrawer.holder.StringHolder;
 import com.mikepenz.materialdrawer.interfaces.OnCheckedChangeListener;
 import com.mikepenz.materialdrawer.model.ExpandableBadgeDrawerItem;
 import com.mikepenz.materialdrawer.model.ExpandableDrawerItem;
@@ -160,7 +162,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 	private AppCompatImageView	menuLaunch;
 
-	private CardView 			searchCard;
 	private LinearLayout 		searchOuter;
 	private EditText 			searchBox;
 	private ListView 			searchResults;
@@ -172,7 +173,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private Polygon 			lastPolygon = null;
 
 	private Client				algolia;
-	private GoogleApiClient 	googleApiClient;
 	private Polyline		 	directionsLine;
 	private Location 			currentLocation;
 
@@ -181,6 +181,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private TimerTask 			transitTimerTask;
 	private boolean 			transitTimerRunning = false;
 	private int					transitCheckedCount = 0;
+	private boolean 			transitOfflineAlertShown = false;
 
 	private ArrayMap<Integer, Boolean> transitCheckedStatus;
 	private ArrayMap<String, JSONObject> transitLayers;
@@ -195,57 +196,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 		res = getResources();
 
-		setupDrawer();
-
 		algolia = new Client(res.getString(R.string.algolia_app_id), res.getString(R.string.algolia_api_key));
 
-		googleApiClient = new GoogleApiClient.Builder(this)
-				.addApi(LocationServices.API)
-				.build();
-
+		setupDrawer();
 		setupMap();
 		setupInfoCard();
 		setupSearch();
 
-		polygons = 				new ArrayMap<>();
-		polygonsByBuildingID = 	new ArrayMap<>();
+		setupPolygons();
 
-		polygonCategories = 	new ArrayMap<>();
-
-		polygonCategories.put("academic", 		new ArrayList<Polygon>());
-		polygonCategories.put("admin", 			new ArrayList<Polygon>());
-		polygonCategories.put("athletics", 		new ArrayList<Polygon>());
-		polygonCategories.put("residential", 	new ArrayList<Polygon>());
-		polygonCategories.put("student", 		new ArrayList<Polygon>());
-		polygonCategories.put("support", 		new ArrayList<Polygon>());
-
-		transitHandler = new Handler();
-		transitTimer = new Timer();
-
-		transitTimerTask = new TimerTask() {
-			@Override
-			public void run() {
-				transitHandler.post(new Runnable() {
-					@Override
-					public void run() {
-						if (transitTimerRunning) {
-							RetrieveTransitLayer transit = new RetrieveTransitLayer();
-							transit.execute();
-						}
-					}
-				});
-			}
-		};
-
-		transitTimer.schedule(transitTimerTask, 0, TRANSIT_UPDATE_MILLISECONDS);
-
-		transitLines = new ArrayMap<>();
-		transitStops = new ArrayList<>();
-
-		transitCheckedStatus = new ArrayMap<>();
-		transitCheckedStatus.put(DRAWER_SWITCH_TRANSIT_BLUE, false);
-		transitCheckedStatus.put(DRAWER_SWITCH_TRANSIT_GOLD, false);
-		transitCheckedStatus.put(DRAWER_SWITCH_TRANSIT_STADIUM, false);
+		setupTransit();
 
 	}
 
@@ -516,7 +476,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	}
 
 	private void setupSearch() {
-		searchCard = 			(CardView) 			findViewById(R.id.searchCard);
 		searchOuter = 			(LinearLayout) 		findViewById(R.id.searchOuter);
 		searchBox = 			(EditText) 			findViewById(R.id.searchBox);
 		searchResults = 		(ListView) 			findViewById(R.id.searchResults);
@@ -644,6 +603,50 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		});
 	}
 
+	private void setupPolygons() {
+		polygons = 				new ArrayMap<>();
+		polygonsByBuildingID = 	new ArrayMap<>();
+
+		polygonCategories = 	new ArrayMap<>();
+
+		polygonCategories.put("academic", 		new ArrayList<Polygon>());
+		polygonCategories.put("admin", 			new ArrayList<Polygon>());
+		polygonCategories.put("athletics", 		new ArrayList<Polygon>());
+		polygonCategories.put("residential", 	new ArrayList<Polygon>());
+		polygonCategories.put("student", 		new ArrayList<Polygon>());
+		polygonCategories.put("support", 		new ArrayList<Polygon>());
+	}
+
+	private void setupTransit() {
+		transitHandler = new Handler();
+		transitTimer = new Timer();
+
+		transitTimerTask = new TimerTask() {
+			@Override
+			public void run() {
+				transitHandler.post(new Runnable() {
+					@Override
+					public void run() {
+						if (transitTimerRunning) {
+							RetrieveTransitLayer transit = new RetrieveTransitLayer();
+							transit.execute();
+						}
+					}
+				});
+			}
+		};
+
+		transitTimer.schedule(transitTimerTask, 0, TRANSIT_UPDATE_MILLISECONDS);
+
+		transitLines = new ArrayMap<>();
+		transitStops = new ArrayList<>();
+
+		transitCheckedStatus = new ArrayMap<>();
+		transitCheckedStatus.put(DRAWER_SWITCH_TRANSIT_BLUE, false);
+		transitCheckedStatus.put(DRAWER_SWITCH_TRANSIT_GOLD, false);
+		transitCheckedStatus.put(DRAWER_SWITCH_TRANSIT_STADIUM, false);
+	}
+
 	@Override
 	public void onMapReady(GoogleMap googleMap) {
 		mMap = googleMap;
@@ -672,7 +675,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 		if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 			ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_LOCATION_PERMISSION);
-			return;
 		}
 		else {
 			mMap.setMyLocationEnabled(true);
@@ -1069,9 +1071,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 									});
 						}
 					}
-					else {
-
-					}
 
 				}
 			});
@@ -1241,7 +1240,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			try {
 				URL url = new URL(urlString);
 				reader = new BufferedReader(new InputStreamReader(url.openStream()));
-				StringBuffer buffer = new StringBuffer();
+				StringBuilder buffer = new StringBuilder();
 				int read;
 				char[] chars = new char[1024];
 				while ((read = reader.read(chars)) != -1)
@@ -1249,11 +1248,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 				return buffer.toString();
 			} finally {
-				if (reader != null)
+				if (reader != null) {
 					reader.close();
+				}
 			}
 		}
-
+		
+		@SuppressWarnings("unused")
 		class Bus {
 			String heading;
 			String id;

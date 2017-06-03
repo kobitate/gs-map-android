@@ -515,6 +515,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		menuLaunch.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view) {
+				// close keyboard if open
+				View focus = getCurrentFocus();
+				if (focus != null) {
+					InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+					imm.hideSoftInputFromWindow(focus.getWindowToken(), 0);
+				}
 				drawer.openDrawer();
 			}
 		});

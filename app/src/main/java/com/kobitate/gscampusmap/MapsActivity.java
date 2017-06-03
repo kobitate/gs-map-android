@@ -76,6 +76,7 @@ import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import com.mikepenz.materialdrawer.Drawer;
 import com.mikepenz.materialdrawer.DrawerBuilder;
 import com.mikepenz.materialdrawer.holder.BadgeStyle;
@@ -1211,66 +1212,74 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		protected void onPostExecute(String s) {
 			super.onPostExecute(s);
 
+			Bus[] buses;
+
 			Gson gson = new Gson();
-			Bus[] buses = gson.fromJson(busJSON, Bus[].class);
+			try {
+				buses = gson.fromJson(busJSON, Bus[].class);
+				assert buses != null;
+				if (buses.length == 0 && !transitOfflineAlertShown) {
+					transitOfflineAlertShown = true;
+					new AlertDialog.Builder(new ContextThemeWrapper(MapsActivity.this, R.style.DialogTheme))
+							.setTitle(R.string.dialog_transit_offline_title)
+							.setMessage(R.string.dialog_transit_offline_message)
+							.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+								@Override
+								public void onClick(DialogInterface dialogInterface, int i) {
 
-			if (buses.length == 0 && !transitOfflineAlertShown) {
-				transitOfflineAlertShown = true;
-				new AlertDialog.Builder(new ContextThemeWrapper(MapsActivity.this, R.style.DialogTheme))
-						.setTitle(R.string.dialog_transit_offline_title)
-						.setMessage(R.string.dialog_transit_offline_message)
-						.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-							@Override
-							public void onClick(DialogInterface dialogInterface, int i) {
+								}
+							})
+							.show();
+				} else if (transitCheckedCount > 0) {
 
+					if (liveBuses == null) {
+						liveBuses = new ArrayMap<>();
+					}
+
+					for (Bus bus : buses) {
+						if (!liveBuses.containsKey(bus.id)) {
+							MarkerOptions newMarker = new MarkerOptions()
+									.position(new LatLng(bus.locationLat, bus.locationLng))
+									.title(bus.route + " - " + bus.title)
+									.snippet(String.format(res.getString(R.string.bus_heading), bus.heading, bus.speed));
+							switch (bus.route) {
+								case "Gold":
+									newMarker.icon(getMarkerIconFromDrawable(getDrawable(R.drawable.bus_gold)));
+									newMarker.visible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_GOLD));
+									break;
+								case "Blue":
+									newMarker.icon(getMarkerIconFromDrawable(getDrawable(R.drawable.bus_blue)));
+									newMarker.visible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_BLUE));
+									break;
+								case "Stadium Express":
+									newMarker.icon(getMarkerIconFromDrawable(getDrawable(R.drawable.bus_stadium)));
+									newMarker.visible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_STADIUM));
+									break;
 							}
-						})
-						.show();
-			} else if (transitCheckedCount > 0) {
-
-				if (liveBuses == null) {
-					liveBuses = new ArrayMap<>();
-				}
-
-				for (Bus bus : buses) {
-					if (!liveBuses.containsKey(bus.id)) {
-						MarkerOptions newMarker = new MarkerOptions()
-								.position(new LatLng(bus.locationLat, bus.locationLng))
-								.title(bus.route + " - " + bus.title)
-								.snippet(String.format(res.getString(R.string.bus_heading), bus.heading, bus.speed));
-						switch (bus.route) {
-							case "Gold":
-								newMarker.icon(getMarkerIconFromDrawable(getDrawable(R.drawable.bus_gold)));
-								newMarker.visible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_GOLD));
-								break;
-							case "Blue":
-								newMarker.icon(getMarkerIconFromDrawable(getDrawable(R.drawable.bus_blue)));
-								newMarker.visible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_BLUE));
-								break;
-							case "Stadium Express":
-								newMarker.icon(getMarkerIconFromDrawable(getDrawable(R.drawable.bus_stadium)));
-								newMarker.visible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_STADIUM));
-								break;
-						}
-						Marker newBus = mMap.addMarker(newMarker);
-						liveBuses.put(bus.id, newBus);
-					} else {
-						Marker marker = liveBuses.get(bus.id);
+							Marker newBus = mMap.addMarker(newMarker);
+							liveBuses.put(bus.id, newBus);
+						} else {
+							Marker marker = liveBuses.get(bus.id);
 //					marker.setPosition(new LatLng(bus.locationLat, bus.locationLng));
-						moveMarker(marker, new LatLng(bus.locationLat, bus.locationLng), new LatLngInterpolator.LinearFixed());
-						marker.setSnippet(String.format(res.getString(R.string.bus_heading), bus.heading, bus.speed));
+							moveMarker(marker, new LatLng(bus.locationLat, bus.locationLng), new LatLngInterpolator.LinearFixed());
+							marker.setSnippet(String.format(res.getString(R.string.bus_heading), bus.heading, bus.speed));
 
-						if (marker.getTitle().contains("Blue")) {
-							marker.setVisible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_BLUE));
-						} else if (marker.getTitle().contains("Gold")) {
-							marker.setVisible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_GOLD));
-						} else if (marker.getTitle().contains("Stadium")) {
-							marker.setVisible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_STADIUM));
+							if (marker.getTitle().contains("Blue")) {
+								marker.setVisible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_BLUE));
+							} else if (marker.getTitle().contains("Gold")) {
+								marker.setVisible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_GOLD));
+							} else if (marker.getTitle().contains("Stadium")) {
+								marker.setVisible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_STADIUM));
+							}
+
 						}
-
 					}
 				}
+			} catch (JsonSyntaxException e) {
+				Toast.makeText(MapsActivity.this, "Error reading bus information", Toast.LENGTH_SHORT).show();
 			}
+
+
 
 		}
 

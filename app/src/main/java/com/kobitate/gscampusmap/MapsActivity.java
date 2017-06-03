@@ -14,6 +14,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -59,6 +60,7 @@ import com.algolia.search.saas.Index;
 import com.algolia.search.saas.Query;
 import com.flipboard.bottomsheet.BottomSheetLayout;
 import com.flipboard.bottomsheet.OnSheetDismissedListener;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -109,84 +111,89 @@ import de.psdev.licensesdialog.model.Notices;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
-	private GoogleMap 			mMap;
-	private JSONObject 			buildings;
+	private GoogleMap mMap;
+	private JSONObject buildings;
 	private ArrayMap<String, JSONObject> polygons;
 	private ArrayMap<String, Polygon> polygonsByBuildingID;
 	private ArrayMap<String, ArrayList<Polygon>> polygonCategories;
 	private ArrayMap<String, Marker> liveBuses;
 
-	private final double 		START_LAT = 						32.42299418602006;
-	private final double 		START_LNG = 						-81.78550992161036;
-	private final float 		START_ZOOM = 						14.56219f;
+	private final double START_LAT = 32.42299418602006;
+	private final double START_LNG = -81.78550992161036;
+	private final float START_ZOOM = 14.56219f;
 
-	private final int			TRANSIT_UPDATE_MILLISECONDS = 		3000;
+	private final int TRANSIT_UPDATE_MILLISECONDS = 3000;
 
-	private final int 			POLYGON_ALPHA = 					77;
-	private final float 		POLYGON_STROKE_WIDTH = 				3.0f;
-	private final float 		POLYGON_STROKE_WIDTH_SELECTED = 	6.0f;
+	private final int POLYGON_ALPHA = 77;
+	private final float POLYGON_STROKE_WIDTH = 3.0f;
+	private final float POLYGON_STROKE_WIDTH_SELECTED = 6.0f;
 
-	private final int 			REQUEST_LOCATION_PERMISSION = 		0;
+	private final int REQUEST_LOCATION_PERMISSION = 0;
 
-	private final int			DRAWER_ITEM_HOME = 					1;
-	private final int			DRAWER_ITEM_ABOUT = 				2;
-	private final int			DRAWER_ITEM_GITHUB = 				3;
+	private final int DRAWER_ITEM_HOME = 1;
+	private final int DRAWER_ITEM_ABOUT = 2;
+	private final int DRAWER_ITEM_GITHUB = 3;
 
-	private final int			DRAWER_SWITCH_ACADEMIC = 			4;
-	private final int			DRAWER_SWITCH_ADMIN = 				5;
-	private final int			DRAWER_SWITCH_ATHLETICS = 			6;
-	private final int			DRAWER_SWITCH_RESIDENTIAL =			7;
-	private final int			DRAWER_SWITCH_STUDENT = 			8;
-	private final int			DRAWER_SWITCH_SUPPORT = 			9;
+	private final int DRAWER_SWITCH_ACADEMIC = 4;
+	private final int DRAWER_SWITCH_ADMIN = 5;
+	private final int DRAWER_SWITCH_ATHLETICS = 6;
+	private final int DRAWER_SWITCH_RESIDENTIAL = 7;
+	private final int DRAWER_SWITCH_STUDENT = 8;
+	private final int DRAWER_SWITCH_SUPPORT = 9;
 
-	private final int			DRAWER_ITEM_TRANSIT = 				10;
+	private final int DRAWER_ITEM_TRANSIT = 10;
 
-	private final int			DRAWER_SWITCH_TRANSIT_BLUE =		11;
-	private final int			DRAWER_SWITCH_TRANSIT_GOLD =		12;
-	private final int			DRAWER_SWITCH_TRANSIT_STADIUM =		13;
+	private final int DRAWER_SWITCH_TRANSIT_BLUE = 11;
+	private final int DRAWER_SWITCH_TRANSIT_GOLD = 12;
+	private final int DRAWER_SWITCH_TRANSIT_STADIUM = 13;
 
-	private Drawer				drawer;
+	private Drawer drawer;
 
-	private TextView 			infoTitle;
-	private TextView 			infoBuildingNumber;
-	private BottomSheetLayout 	infoCard;
-	private TextView 			infoAddress;
-	private TextView 			infoAddressCity;
-	private TextView 			infoDetails;
-	private TextView 			infoTypeText;
-	private CardView 			infoType;
-	private AppCompatImageView 	infoTypeIcon;
-	private CardView			infoOpenInMaps;
-	private TextView			infoOpenInMapsText;
-	private CardView			infoWalkingDirections;
+	private TextView infoTitle;
+	private TextView infoBuildingNumber;
+	private BottomSheetLayout infoCard;
+	private TextView infoAddress;
+	private TextView infoAddressCity;
+	private TextView infoDetails;
+	private TextView infoTypeText;
+	private CardView infoType;
+	private AppCompatImageView infoTypeIcon;
+	private CardView infoOpenInMaps;
+	private TextView infoOpenInMapsText;
+	private CardView infoWalkingDirections;
 
-	private AppCompatImageView	menuLaunch;
+	private AppCompatImageView menuLaunch;
 
-	private LinearLayout 		searchOuter;
-	private EditText 			searchBox;
-	private ListView 			searchResults;
-	private RelativeLayout 		searchResultsOuter;
+	private LinearLayout searchOuter;
+	private EditText searchBox;
+	private ListView searchResults;
+	private RelativeLayout searchResultsOuter;
 
 	private ArrayList<JSONObject> lastSearch;
 
-	private Resources 			res;
-	private Polygon 			lastPolygon = null;
+	private Resources res;
+	private Polygon lastPolygon = null;
 
-	private Client				algolia;
-	private Polyline		 	directionsLine;
-	private Location 			currentLocation;
+	private Client algolia;
+	private Polyline directionsLine;
+	private Location currentLocation;
 
-	private Handler 			transitHandler;
-	private Timer 				transitTimer;
-	private TimerTask 			transitTimerTask;
-	private boolean 			transitTimerRunning = false;
-	private int					transitCheckedCount = 0;
-	private boolean 			transitOfflineAlertShown = false;
+	private Handler transitHandler;
+	private Timer transitTimer;
+	private TimerTask transitTimerTask;
+	private boolean transitTimerRunning = false;
+	private int transitCheckedCount = 0;
+	private boolean transitOfflineAlertShown = false;
 
 	private ArrayMap<Integer, Boolean> transitCheckedStatus;
 	private ArrayMap<String, JSONObject> transitLayers;
 	private ArrayMap<String, Polyline> transitLines;
 	private ArrayList<Marker> transitStops;
+
+	private LocationManager lm;
+	private LocationListener locationListener;
+
+	private boolean didStart = false;
 
 
 	@Override
@@ -209,6 +216,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 	}
 
+	@Override
+	protected void onPause() {
+		super.onPause();
+		if (lm != null && didStart) {
+			lm.removeUpdates(locationListener);
+		}
+	}
+
+	@Override
+	protected void onResume() {
+		super.onResume();
+		if (didStart) {
+			setupLocationListener();
+		}
+	}
+
 	private void setupDrawer() {
 
 
@@ -217,22 +240,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			public void onCheckedChanged(IDrawerItem drawerItem, CompoundButton buttonView, boolean isChecked) {
 				String hideType;
 				switch ((int) drawerItem.getIdentifier()) {
-					case DRAWER_SWITCH_ACADEMIC :
+					case DRAWER_SWITCH_ACADEMIC:
 						hideType = "academic";
 						break;
-					case DRAWER_SWITCH_ADMIN :
+					case DRAWER_SWITCH_ADMIN:
 						hideType = "admin";
 						break;
-					case DRAWER_SWITCH_ATHLETICS :
+					case DRAWER_SWITCH_ATHLETICS:
 						hideType = "athletics";
 						break;
-					case DRAWER_SWITCH_RESIDENTIAL :
+					case DRAWER_SWITCH_RESIDENTIAL:
 						hideType = "residential";
 						break;
-					case DRAWER_SWITCH_STUDENT :
+					case DRAWER_SWITCH_STUDENT:
 						hideType = "student";
 						break;
-					case DRAWER_SWITCH_SUPPORT :
+					case DRAWER_SWITCH_SUPPORT:
 						hideType = "support";
 						break;
 					default:
@@ -249,14 +272,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		OnCheckedChangeListener drawerTransitSwitchListener = new OnCheckedChangeListener() {
 			@Override
 			public void onCheckedChanged(IDrawerItem drawerItem, CompoundButton buttonView, boolean isChecked) {
+
+				int previousCheckedCount = transitCheckedCount;
+
 				if (isChecked) {
 					transitCheckedCount++;
-				}
-				else {
+				} else {
 					transitCheckedCount--;
 				}
-				
-				if (transitCheckedCount == 1) {
+
+				if (transitCheckedCount == 1 && previousCheckedCount == 0) {
 					Toast.makeText(MapsActivity.this, getString(R.string.finding_buses), Toast.LENGTH_SHORT).show();
 				}
 
@@ -288,13 +313,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 				if (!transitTimerRunning && transitCheckedCount > 0) {
 					transitTimerRunning = true;
-				}
-				else if (transitTimerRunning && transitCheckedCount == 0) {
+				} else if (transitTimerRunning && transitCheckedCount == 0) {
 					transitTimerRunning = false;
 				}
 
 				transitCheckedStatus.put((int) drawerItem.getIdentifier(), isChecked);
-
 
 
 				for (Marker marker : transitStops) {
@@ -322,105 +345,105 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				.withHeader(R.layout.drawer_header)
 				.withTranslucentStatusBar(false)
 				.addDrawerItems(
-					new ExpandableDrawerItem()
-						.withIdentifier(DRAWER_ITEM_HOME)
-						.withName(R.string.drawer_map_home)
-						.withIcon(R.drawable.map)
-						.withIsExpanded(true)
-						.withSelectable(false)
-						.withIconColor(R.color.material_drawer_hint_icon)
-						.withSelectedIconColor(R.color.primary)
-						.withSetSelected(false)
-						.withSubItems(
-							new SecondarySwitchDrawerItem()
-								.withName(R.string.building_type_academic)
-								.withChecked(true)
+						new ExpandableDrawerItem()
+								.withIdentifier(DRAWER_ITEM_HOME)
+								.withName(R.string.drawer_map_home)
+								.withIcon(R.drawable.map)
+								.withIsExpanded(true)
 								.withSelectable(false)
-								.withIdentifier(DRAWER_SWITCH_ACADEMIC)
-								.withOnCheckedChangeListener(drawerBuildingSwitchListener)
-								.withLevel(2),
-							new SecondarySwitchDrawerItem()
-								.withName(R.string.building_type_admin)
-								.withChecked(true)
-								.withSelectable(false)
-								.withIdentifier(DRAWER_SWITCH_ADMIN)
-								.withOnCheckedChangeListener(drawerBuildingSwitchListener)
-								.withLevel(2),
-							new SecondarySwitchDrawerItem()
-								.withName(R.string.building_type_athletics)
-								.withChecked(true)
-								.withSelectable(false)
-								.withIdentifier(DRAWER_SWITCH_ATHLETICS)
-								.withOnCheckedChangeListener(drawerBuildingSwitchListener)
-								.withLevel(2),
-							new SecondarySwitchDrawerItem()
-								.withName(R.string.building_type_residential)
-								.withChecked(true)
-								.withSelectable(false)
-								.withIdentifier(DRAWER_SWITCH_RESIDENTIAL)
-								.withOnCheckedChangeListener(drawerBuildingSwitchListener)
-								.withLevel(2),
-							new SecondarySwitchDrawerItem()
-								.withName(R.string.building_type_student)
-								.withChecked(true)
-								.withSelectable(false)
-								.withIdentifier(DRAWER_SWITCH_STUDENT)
-								.withOnCheckedChangeListener(drawerBuildingSwitchListener)
-								.withLevel(2),
-							new SecondarySwitchDrawerItem()
-								.withName(R.string.building_type_support)
-								.withChecked(true)
-								.withSelectable(false)
-								.withIdentifier(DRAWER_SWITCH_SUPPORT)
-								.withOnCheckedChangeListener(drawerBuildingSwitchListener)
-								.withLevel(2)
-							),
+								.withIconColor(R.color.material_drawer_hint_icon)
+								.withSelectedIconColor(R.color.primary)
+								.withSetSelected(false)
+								.withSubItems(
+										new SecondarySwitchDrawerItem()
+												.withName(R.string.building_type_academic)
+												.withChecked(true)
+												.withSelectable(false)
+												.withIdentifier(DRAWER_SWITCH_ACADEMIC)
+												.withOnCheckedChangeListener(drawerBuildingSwitchListener)
+												.withLevel(2),
+										new SecondarySwitchDrawerItem()
+												.withName(R.string.building_type_admin)
+												.withChecked(true)
+												.withSelectable(false)
+												.withIdentifier(DRAWER_SWITCH_ADMIN)
+												.withOnCheckedChangeListener(drawerBuildingSwitchListener)
+												.withLevel(2),
+										new SecondarySwitchDrawerItem()
+												.withName(R.string.building_type_athletics)
+												.withChecked(true)
+												.withSelectable(false)
+												.withIdentifier(DRAWER_SWITCH_ATHLETICS)
+												.withOnCheckedChangeListener(drawerBuildingSwitchListener)
+												.withLevel(2),
+										new SecondarySwitchDrawerItem()
+												.withName(R.string.building_type_residential)
+												.withChecked(true)
+												.withSelectable(false)
+												.withIdentifier(DRAWER_SWITCH_RESIDENTIAL)
+												.withOnCheckedChangeListener(drawerBuildingSwitchListener)
+												.withLevel(2),
+										new SecondarySwitchDrawerItem()
+												.withName(R.string.building_type_student)
+												.withChecked(true)
+												.withSelectable(false)
+												.withIdentifier(DRAWER_SWITCH_STUDENT)
+												.withOnCheckedChangeListener(drawerBuildingSwitchListener)
+												.withLevel(2),
+										new SecondarySwitchDrawerItem()
+												.withName(R.string.building_type_support)
+												.withChecked(true)
+												.withSelectable(false)
+												.withIdentifier(DRAWER_SWITCH_SUPPORT)
+												.withOnCheckedChangeListener(drawerBuildingSwitchListener)
+												.withLevel(2)
+								),
 
-					new ExpandableBadgeDrawerItem()
-						.withIdentifier(DRAWER_ITEM_TRANSIT)
-						.withName(R.string.drawer_transit)
-						.withIcon(R.drawable.bus)
-						.withSelectable(false)
-						.withIconColor(R.color.material_drawer_hint_icon)
-						.withSelectedIconColor(R.color.primary)
-						.withBadge(R.string.drawer_label_live)
-						.withBadgeStyle(new BadgeStyle()
-							.withTextColor(Color.WHITE)
-							.withColorRes(R.color.md_red_700))
-						.withSubItems(
-							new SecondarySwitchDrawerItem()
-								.withLevel(2)
-								.withIdentifier(DRAWER_SWITCH_TRANSIT_BLUE)
-								.withName(R.string.transit_route_blue)
+						new ExpandableBadgeDrawerItem()
+								.withIdentifier(DRAWER_ITEM_TRANSIT)
+								.withName(R.string.drawer_transit)
+								.withIcon(R.drawable.bus)
 								.withSelectable(false)
-								.withOnCheckedChangeListener(drawerTransitSwitchListener),
-							new SecondarySwitchDrawerItem()
-								.withLevel(2)
-								.withIdentifier(DRAWER_SWITCH_TRANSIT_GOLD)
-								.withName(R.string.transit_route_gold)
-								.withSelectable(false)
-								.withOnCheckedChangeListener(drawerTransitSwitchListener),
-							new SecondarySwitchDrawerItem()
-								.withLevel(2)
-								.withIdentifier(DRAWER_SWITCH_TRANSIT_STADIUM)
-								.withName(R.string.transit_route_stadium)
-								.withSelectable(false)
-								.withOnCheckedChangeListener(drawerTransitSwitchListener)
-						),
+								.withIconColor(R.color.material_drawer_hint_icon)
+								.withSelectedIconColor(R.color.primary)
+								.withBadge(R.string.drawer_label_live)
+								.withBadgeStyle(new BadgeStyle()
+										.withTextColor(Color.WHITE)
+										.withColorRes(R.color.md_red_700))
+								.withSubItems(
+										new SecondarySwitchDrawerItem()
+												.withLevel(2)
+												.withIdentifier(DRAWER_SWITCH_TRANSIT_BLUE)
+												.withName(R.string.transit_route_blue)
+												.withSelectable(false)
+												.withOnCheckedChangeListener(drawerTransitSwitchListener),
+										new SecondarySwitchDrawerItem()
+												.withLevel(2)
+												.withIdentifier(DRAWER_SWITCH_TRANSIT_GOLD)
+												.withName(R.string.transit_route_gold)
+												.withSelectable(false)
+												.withOnCheckedChangeListener(drawerTransitSwitchListener),
+										new SecondarySwitchDrawerItem()
+												.withLevel(2)
+												.withIdentifier(DRAWER_SWITCH_TRANSIT_STADIUM)
+												.withName(R.string.transit_route_stadium)
+												.withSelectable(false)
+												.withOnCheckedChangeListener(drawerTransitSwitchListener)
+								),
 
-					new SectionDrawerItem()
-						.withName(R.string.drawer_section_about),
+						new SectionDrawerItem()
+								.withName(R.string.drawer_section_about),
 
-					new PrimaryDrawerItem()
-						.withIdentifier(DRAWER_ITEM_ABOUT)
-						.withName(R.string.drawer_legal)
-						.withIcon(R.drawable.book)
-						.withSelectable(false),
-					new PrimaryDrawerItem()
-						.withIdentifier(DRAWER_ITEM_GITHUB)
-						.withName(R.string.drawer_github)
-						.withIcon(R.drawable.new_window)
-						.withSelectable(false)
+						new PrimaryDrawerItem()
+								.withIdentifier(DRAWER_ITEM_ABOUT)
+								.withName(R.string.drawer_legal)
+								.withIcon(R.drawable.book)
+								.withSelectable(false),
+						new PrimaryDrawerItem()
+								.withIdentifier(DRAWER_ITEM_GITHUB)
+								.withName(R.string.drawer_github)
+								.withIcon(R.drawable.new_window)
+								.withSelectable(false)
 				)
 				.withOnDrawerItemClickListener(new Drawer.OnDrawerItemClickListener() {
 					@Override
@@ -479,12 +502,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	}
 
 	private void setupSearch() {
-		searchOuter = 			(LinearLayout) 		findViewById(R.id.searchOuter);
-		searchBox = 			(EditText) 			findViewById(R.id.searchBox);
-		searchResults = 		(ListView) 			findViewById(R.id.searchResults);
-		searchResultsOuter =	(RelativeLayout)	findViewById(R.id.searchResultsOuter);
+		searchOuter = (LinearLayout) findViewById(R.id.searchOuter);
+		searchBox = (EditText) findViewById(R.id.searchBox);
+		searchResults = (ListView) findViewById(R.id.searchResults);
+		searchResultsOuter = (RelativeLayout) findViewById(R.id.searchResultsOuter);
 
-		menuLaunch = 			(AppCompatImageView)findViewById(R.id.menuLaunch);
+		menuLaunch = (AppCompatImageView) findViewById(R.id.menuLaunch);
 
 		menuLaunch.setOnClickListener(new View.OnClickListener() {
 			@Override
@@ -517,8 +540,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 								adapterResult.add(new String[]{
 										Html.fromHtml(b.getString("name"), Html.FROM_HTML_MODE_LEGACY).toString()
 								});
-							}
-							else {
+							} else {
 								//noinspection deprecation
 								adapterResult.add(new String[]{
 										Html.fromHtml(b.getString("name")).toString()
@@ -556,8 +578,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				String searchQuery = searchBox.getText().toString();
 				if (searchQuery.length() == 0) {
 					searchResultsOuter.setVisibility(View.GONE);
-				}
-				else {
+				} else {
 					search.searchAsync(new Query(searchQuery), searchCompletionHandler);
 				}
 			}
@@ -584,8 +605,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 					if (p == null) {
 						String toastString = String.format(res.getString(R.string.search_building_notfound), b.getString("objectID"));
 						Toast.makeText(MapsActivity.this, toastString, Toast.LENGTH_LONG).show();
-					}
-					else {
+					} else {
 						polygonClick(p);
 						searchResultsOuter.setVisibility(View.GONE);
 
@@ -607,17 +627,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	}
 
 	private void setupPolygons() {
-		polygons = 				new ArrayMap<>();
-		polygonsByBuildingID = 	new ArrayMap<>();
+		polygons = new ArrayMap<>();
+		polygonsByBuildingID = new ArrayMap<>();
 
-		polygonCategories = 	new ArrayMap<>();
+		polygonCategories = new ArrayMap<>();
 
-		polygonCategories.put("academic", 		new ArrayList<Polygon>());
-		polygonCategories.put("admin", 			new ArrayList<Polygon>());
-		polygonCategories.put("athletics", 		new ArrayList<Polygon>());
-		polygonCategories.put("residential", 	new ArrayList<Polygon>());
-		polygonCategories.put("student", 		new ArrayList<Polygon>());
-		polygonCategories.put("support", 		new ArrayList<Polygon>());
+		polygonCategories.put("academic", new ArrayList<Polygon>());
+		polygonCategories.put("admin", new ArrayList<Polygon>());
+		polygonCategories.put("athletics", new ArrayList<Polygon>());
+		polygonCategories.put("residential", new ArrayList<Polygon>());
+		polygonCategories.put("student", new ArrayList<Polygon>());
+		polygonCategories.put("support", new ArrayList<Polygon>());
 	}
 
 	private void setupTransit() {
@@ -678,11 +698,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 		if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 			ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_LOCATION_PERMISSION);
-		}
-		else {
+		} else {
 			mMap.setMyLocationEnabled(true);
 			setupLocationListener();
 		}
+
+		didStart = true;
 
 	}
 
@@ -723,7 +744,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			}
 
 			polygonCoordString = polygonCoordString.substring(1);
-			polygonCoordString = polygonCoordString.substring(0, polygonCoordString.length()-1);
+			polygonCoordString = polygonCoordString.substring(0, polygonCoordString.length() - 1);
 
 			String[] polygonCoords = polygonCoordString.split("],\\[");
 			PolygonOptions polygonOptions = new PolygonOptions();
@@ -830,8 +851,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 					Polyline polyline = mMap.addPolyline(routeLine);
 					transitLines.put(route, polyline);
-				}
-				else if (feature.getJSONObject("geometry").getString("type").equals("Point")) {
+				} else if (feature.getJSONObject("geometry").getString("type").equals("Point")) {
 					MarkerOptions stopMarker = new MarkerOptions();
 
 					JSONArray coordsArray = geometry.getJSONArray("coordinates");
@@ -866,9 +886,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private int alpha(int color, int alpha) {
 		color = ContextCompat.getColor(getApplicationContext(), color);
 
-		int red = 		Color.red(color);
-		int blue = 		Color.blue(color);
-		int green = 	Color.green(color);
+		int red = Color.red(color);
+		int blue = Color.blue(color);
+		int green = Color.green(color);
 
 		return Color.argb(alpha, red, green, blue);
 	}
@@ -903,39 +923,35 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 			if (infoTitle == null) {
 				infoCard.showWithSheetView(getLayoutInflater().inflate(R.layout.building_info, infoCard, false));
-			}
-			else {
+			} else {
 				infoCard.peekSheet();
 			}
 
-			infoTitle = 			(TextView) 				infoCard.findViewById(R.id.infoTitle);
-			infoBuildingNumber = 	(TextView) 				infoCard.findViewById(R.id.infoBuildingNumber);
-			infoAddress = 			(TextView) 				infoCard.findViewById(R.id.infoAddress);
-			infoAddressCity = 		(TextView)				infoCard.findViewById(R.id.infoAddressCity);
-			infoDetails = 			(TextView) 				infoCard.findViewById(R.id.infoDetails);
-			infoTypeText = 			(TextView) 				infoCard.findViewById(R.id.infoTypeText);
-			infoType =				(CardView) 				infoCard.findViewById(R.id.infoType);
-			infoTypeIcon = 			(AppCompatImageView) 	infoCard.findViewById(R.id.infoTypeIcon);
-			infoOpenInMaps = 		(CardView)				infoCard.findViewById(R.id.infoOpenInMaps);
-			infoOpenInMapsText =	(TextView)				infoCard.findViewById(R.id.infoOpenInMapsText);
-			infoWalkingDirections = (CardView)				infoCard.findViewById(R.id.infoWalkingDirections);
+			infoTitle = (TextView) infoCard.findViewById(R.id.infoTitle);
+			infoBuildingNumber = (TextView) infoCard.findViewById(R.id.infoBuildingNumber);
+			infoAddress = (TextView) infoCard.findViewById(R.id.infoAddress);
+			infoAddressCity = (TextView) infoCard.findViewById(R.id.infoAddressCity);
+			infoDetails = (TextView) infoCard.findViewById(R.id.infoDetails);
+			infoTypeText = (TextView) infoCard.findViewById(R.id.infoTypeText);
+			infoType = (CardView) infoCard.findViewById(R.id.infoType);
+			infoTypeIcon = (AppCompatImageView) infoCard.findViewById(R.id.infoTypeIcon);
+			infoOpenInMaps = (CardView) infoCard.findViewById(R.id.infoOpenInMaps);
+			infoOpenInMapsText = (TextView) infoCard.findViewById(R.id.infoOpenInMapsText);
+			infoWalkingDirections = (CardView) infoCard.findViewById(R.id.infoWalkingDirections);
 
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
 				infoTitle.setText(Html.fromHtml(p.getString("name_popup"), Html.FROM_HTML_MODE_LEGACY));
 				if (p.getString("bldg_details") == null || p.getString("bldg_details").equals("null")) {
 					infoDetails.setText("");
-				}
-				else {
+				} else {
 					infoDetails.setText(Html.fromHtml(p.getString("bldg_details"), Html.FROM_HTML_MODE_LEGACY));
 				}
-			}
-			else {
+			} else {
 				//noinspection deprecation
 				infoTitle.setText(Html.fromHtml(p.getString("name_popup")));
 				if (p.getString("bldg_details") == null) {
 					infoDetails.setText("");
-				}
-				else {
+				} else {
 					//noinspection deprecation
 					infoDetails.setText(Html.fromHtml(p.getString("bldg_details")));
 				}
@@ -943,8 +959,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 			if (p.getString("bldg_number") == null || p.getString("bldg_number").equals("null")) {
 				infoBuildingNumber.setText("");
-			}
-			else {
+			} else {
 				String buildingNumberString = String.format(res.getString(R.string.building_number), p.getString("bldg_number"));
 				infoBuildingNumber.setText(buildingNumberString);
 
@@ -954,8 +969,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				infoAddress.setText("");
 				infoAddress.setVisibility(View.GONE);
 				infoAddressCity.setVisibility(View.GONE);
-			}
-			else {
+			} else {
 				infoAddress.setText(p.getString("loc_address"));
 				infoAddress.setVisibility(View.VISIBLE);
 				infoAddressCity.setVisibility(View.VISIBLE);
@@ -1009,7 +1023,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			String defaultMapsApp = res.getString(R.string.info_mapapp_fallback_name);
 
 			try {
-				 defaultMapsApp = (String) pm.getApplicationLabel(pm.getApplicationInfo(defaultPackageName, 0));
+				defaultMapsApp = (String) pm.getApplicationLabel(pm.getApplicationInfo(defaultPackageName, 0));
 			} catch (PackageManager.NameNotFoundException e) {
 				e.printStackTrace();
 			}
@@ -1035,12 +1049,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 						if (directionsLine != null) {
 							directionsLine.remove();
 						}
-						
+
 						if (currentLocation == null) {
 							Toast.makeText(MapsActivity.this, getString(R.string.directions_no_location), Toast.LENGTH_LONG).show();
-						}
-
-						else {
+						} else {
 
 							GoogleDirection
 									.withServerKey(res.getString(R.string.google_maps_serverkey))
@@ -1056,11 +1068,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 												ArrayList<LatLng> pointList = leg.getDirectionPoint();
 
 												PolylineOptions directionsStyle = DirectionConverter.createPolyline(
-														getApplicationContext(), 
-														pointList, 
-														5, 
+														getApplicationContext(),
+														pointList,
+														5,
 														ContextCompat.getColor(getApplicationContext(), R.color.mapAcademic));
-												
+
 												directionsLine = mMap.addPolyline(directionsStyle);
 											} else {
 												Toast.makeText(MapsActivity.this, res.getString(R.string.directions_error), Toast.LENGTH_LONG).show();
@@ -1152,8 +1164,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	}
 
 	private void setupLocationListener() {
-		LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-		lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, new android.location.LocationListener() {
+		lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+		locationListener = new android.location.LocationListener() {
 			@Override
 			public void onLocationChanged(Location location) {
 				currentLocation = location;
@@ -1173,7 +1185,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			public void onProviderDisabled(String s) {
 
 			}
-		});
+		};
+
+		lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, locationListener);
 	}
 
 	class RetrieveTransitLayer extends AsyncTask<String, Void, String> {
@@ -1201,17 +1215,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			if (buses.length == 0 && !transitOfflineAlertShown) {
 				transitOfflineAlertShown = true;
 				new AlertDialog.Builder(new ContextThemeWrapper(MapsActivity.this, R.style.DialogTheme))
-					.setTitle(R.string.dialog_transit_offline_title)
-					.setMessage(R.string.dialog_transit_offline_message)
-					.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-						@Override
-						public void onClick(DialogInterface dialogInterface, int i) {
+						.setTitle(R.string.dialog_transit_offline_title)
+						.setMessage(R.string.dialog_transit_offline_message)
+						.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+							@Override
+							public void onClick(DialogInterface dialogInterface, int i) {
 
-						}
-					})
-					.show();
-			}
-			else if (transitCheckedCount > 0) {
+							}
+						})
+						.show();
+			} else if (transitCheckedCount > 0) {
 
 				if (liveBuses == null) {
 					liveBuses = new ArrayMap<>();
@@ -1247,11 +1260,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 						if (marker.getTitle().contains("Blue")) {
 							marker.setVisible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_BLUE));
-						}
-						else if (marker.getTitle().contains("Gold")) {
+						} else if (marker.getTitle().contains("Gold")) {
 							marker.setVisible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_GOLD));
-						}
-						else if (marker.getTitle().contains("Stadium")) {
+						} else if (marker.getTitle().contains("Stadium")) {
 							marker.setVisible(transitCheckedStatus.get(DRAWER_SWITCH_TRANSIT_STADIUM));
 						}
 
@@ -1378,6 +1389,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		drawable.draw(canvas);
 		return BitmapDescriptorFactory.fromBitmap(bitmap);
 	}
+
+
 
 
 }

@@ -77,6 +77,7 @@ import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
+import com.kobakei.ratethisapp.RateThisApp;
 import com.mikepenz.materialdrawer.Drawer;
 import com.mikepenz.materialdrawer.DrawerBuilder;
 import com.mikepenz.materialdrawer.holder.BadgeStyle;
@@ -214,6 +215,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		setupPolygons();
 
 		setupTransit();
+
+		setupRateDialog();
 
 	}
 
@@ -679,6 +682,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		transitCheckedStatus.put(DRAWER_SWITCH_TRANSIT_BLUE, false);
 		transitCheckedStatus.put(DRAWER_SWITCH_TRANSIT_GOLD, false);
 		transitCheckedStatus.put(DRAWER_SWITCH_TRANSIT_STADIUM, false);
+	}
+
+	private void setupRateDialog() {
+		// Monitor launch times and interval from installation
+		RateThisApp.onCreate(this);
+		// If the condition is satisfied, "Rate this app" dialog will be shown
+		RateThisApp.showRateDialogIfNeeded(this);
 	}
 
 	@Override

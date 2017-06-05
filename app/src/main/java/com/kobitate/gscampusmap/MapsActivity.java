@@ -196,6 +196,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private LocationListener locationListener;
 
 	private boolean didStart = false;
+	private boolean didSetupLocation = false;
+	private boolean didCloseApp = false;
 
 
 	@Override
@@ -223,10 +225,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	@Override
 	protected void onPause() {
 		super.onPause();
-		if (lm != null && didStart) {
+		if (lm != null) {
 			Log.d(getString(R.string.app_name), "Stopping location listener");
 			lm.removeUpdates(locationListener);
 			locationListener = null;
+			lm = null;
+			didCloseApp = true;
 		}
 	}
 
@@ -234,7 +238,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	protected void onResume() {
 		super.onResume();
 		if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-			if (didStart) {
+			if (didStart && didSetupLocation && didCloseApp) {
 				setupLocationListener();
 			}
 		}
@@ -1185,6 +1189,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	}
 
 	private void setupLocationListener() {
+		Log.d(getString(R.string.app_name), "Listener setup");
 		lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 		locationListener = new android.location.LocationListener() {
 			@Override
@@ -1209,6 +1214,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		};
 
 		lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, locationListener);
+
+		didSetupLocation = true;
 	}
 
 	class RetrieveTransitLayer extends AsyncTask<String, Void, String> {

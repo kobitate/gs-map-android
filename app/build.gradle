@@ -40,5 +40,6 @@ dependencies {
     }
     compile 'com.akexorcist:googledirectionlibrary:1.0.5'
     compile 'com.google.maps.android:android-maps-utils:0.4'
+    compile 'io.github.kobakei:ratethisapp:1.2.0'
 
 }

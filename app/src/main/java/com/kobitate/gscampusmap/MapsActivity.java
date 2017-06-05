@@ -221,7 +221,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	protected void onPause() {
 		super.onPause();
 		if (lm != null && didStart) {
+			Log.d(getString(R.string.app_name), "Stopping location listener");
 			lm.removeUpdates(locationListener);
+			locationListener = null;
 		}
 	}
 

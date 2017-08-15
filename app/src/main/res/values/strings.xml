@@ -37,5 +37,6 @@
     <string name="dialog_transit_offline_message">Sorry, the live bus information server is currently offline. Please try again later. Stop and Route information will still be displayed.</string>
     <string name="dialog_no_internet_title">No Internet Connection</string>
     <string name="dialog_no_internet_message">GS Campus Map requires an internet connection. Please check your WiFi and/or mobile data and try to open the app again.</string>
+    <string name="error_search_results">There was an error loading your search results</string>
 
 </resources>

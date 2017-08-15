@@ -29,4 +29,5 @@
     <string name="dialog_transit_offline_message">Lo ciento, el información en vivo de los autobuses está desconectado. Por favor inténtalo más tarde. Información de las paradas y las routas todavía funciona.</string>
     <string name="dialog_no_internet_title">No hay Conexión de Internet</string>
     <string name="dialog_no_internet_message">GS Mapa de Campus no puede funcionar sin un conexión de Internet. Por favor verifica tu conexión de WiFi o movil y inténtalo otra vez.</string>
+    <string name="error_search_results">Hubo un error con tus resultados</string>
 </resources>

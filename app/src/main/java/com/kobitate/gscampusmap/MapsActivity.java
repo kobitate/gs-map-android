@@ -573,38 +573,54 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		final CompletionHandler searchCompletionHandler = new CompletionHandler() {
 			@Override
 			public void requestCompleted(JSONObject result, AlgoliaException e) {
-
-				ArrayList<String[]> adapterResult = new ArrayList<>();
-				lastSearch = new ArrayList<>();
-
-				try {
-					JSONArray hits = result.getJSONArray("hits");
-					for (int i = 0; i < hits.length(); i++) {
-						JSONObject b = hits.getJSONObject(i);
-						Polygon p = polygonsByBuildingID.get(b.getString("objectID"));
-
-						if (p != null) {
-							if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-								adapterResult.add(new String[]{
-										Html.fromHtml(b.getString("name"), Html.FROM_HTML_MODE_LEGACY).toString()
-								});
-							} else {
-								//noinspection deprecation
-								adapterResult.add(new String[]{
-										Html.fromHtml(b.getString("name")).toString()
-								});
-							}
-							lastSearch.add(b);
+				
+				if (e.getStatusCode() == 0) {
+					runOnUiThread(new Runnable() {
+						@Override
+						public void run() {
+							Toast.makeText(MapsActivity.this, res.getString(R.string.error_search_results), Toast.LENGTH_LONG).show();
 						}
+					});
+				} else {
 
+					ArrayList<String[]> adapterResult = new ArrayList<>();
+					lastSearch = new ArrayList<>();
+
+					try {
+						JSONArray hits = result.getJSONArray("hits");
+						for (int i = 0; i < hits.length(); i++) {
+							JSONObject b = hits.getJSONObject(i);
+							Polygon p = polygonsByBuildingID.get(b.getString("objectID"));
+
+							if (p != null) {
+								if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+									adapterResult.add(new String[]{
+											Html.fromHtml(b.getString("name"), Html.FROM_HTML_MODE_LEGACY).toString()
+									});
+								} else {
+									//noinspection deprecation
+									adapterResult.add(new String[]{
+											Html.fromHtml(b.getString("name")).toString()
+									});
+								}
+								lastSearch.add(b);
+							}
+
+						}
+					} catch (JSONException | NullPointerException e1) {
+						runOnUiThread(new Runnable() {
+							@Override
+							public void run() {
+								Toast.makeText(MapsActivity.this, res.getString(R.string.error_search_results), Toast.LENGTH_LONG).show();
+							}
+						});
 					}
-				} catch (JSONException e1) {
-					e1.printStackTrace();
-				}
 
-				SearchAdapter resultsAdapter = new SearchAdapter(getApplicationContext(), R.id.searchResults, adapterResult);
-				searchResults.setAdapter(resultsAdapter);
-				searchResultsOuter.setVisibility(View.VISIBLE);
+					SearchAdapter resultsAdapter = new SearchAdapter(getApplicationContext(), R.id.searchResults, adapterResult);
+					searchResults.setAdapter(resultsAdapter);
+					searchResultsOuter.setVisibility(View.VISIBLE);
+
+				}
 
 
 			}
@@ -1335,7 +1351,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 						}
 					}
 				}
-			} catch (JsonSyntaxException e) {
+			} catch (JsonSyntaxException | NullPointerException e) {
 				Toast.makeText(MapsActivity.this, "Error reading bus information", Toast.LENGTH_SHORT).show();
 			}
 
@@ -1409,11 +1425,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		@Override
 		protected void onPostExecute(String s) {
 			super.onPostExecute(s);
+			try {
+				Gson gson = new Gson();
+				Bus[] buses = gson.fromJson(busJSON, Bus[].class);
 
-			Gson gson = new Gson();
-			Bus[] buses = gson.fromJson(busJSON, Bus[].class);
-
-			if (buses.length == 0) {
+				if (buses.length == 0) {
+					drawer.updateBadge(DRAWER_ITEM_TRANSIT, new StringHolder(null));
+				}
+			}
+			catch (NullPointerException | JsonSyntaxException e) {
 				drawer.updateBadge(DRAWER_ITEM_TRANSIT, new StringHolder(null));
 			}
 

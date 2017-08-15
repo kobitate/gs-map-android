@@ -662,9 +662,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 							boundsBuilder.include(latLng);
 						}
 
-						LatLngBounds bounds = boundsBuilder.build();
+						final LatLngBounds bounds = boundsBuilder.build();
+						runOnUiThread(new Runnable() {
+							@Override
+							public void run() {
+								mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 300));
+							}
+						});
 
-						mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 300));
 					}
 
 				} catch (JSONException e) {

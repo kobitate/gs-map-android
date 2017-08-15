@@ -1092,6 +1092,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 			String uri = String.format(Locale.ENGLISH, "geo:%f,%f?q=" + p.getString("loc_address"), pLat, pLng);
 			final Intent mapsIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+			mapsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
 			PackageManager pm = getPackageManager();
 			ResolveInfo intentAppInfo = pm.resolveActivity(mapsIntent, PackageManager.MATCH_DEFAULT_ONLY);

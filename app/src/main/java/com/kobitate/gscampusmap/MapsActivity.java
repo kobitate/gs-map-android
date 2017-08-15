@@ -16,6 +16,7 @@ import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -60,7 +61,6 @@ import com.algolia.search.saas.Index;
 import com.algolia.search.saas.Query;
 import com.flipboard.bottomsheet.BottomSheetLayout;
 import com.flipboard.bottomsheet.OnSheetDismissedListener;
-import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -98,7 +98,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.InetAddress;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Locale;
@@ -207,6 +209,35 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 		res = getResources();
 
+		AsyncTask checkConnection = new AsyncTask() {
+			@Override
+			protected Object doInBackground(Object[] objects) {
+				try {
+					final InetAddress address = InetAddress.getByName("www.google.com");
+					return !address.equals("");
+				} catch (UnknownHostException e) {
+					Log.e("checkConnection", "Unknown Host");
+					return false;
+				}
+			}
+
+			@Override
+			protected void onPostExecute(Object o) {
+				super.onPostExecute(o);
+				if ((boolean) o) {
+					initApp();
+				}
+				else {
+					showConnectionError();
+				}
+			}
+		};
+
+		checkConnection.execute();
+
+	}
+
+	private void initApp() {
 		algolia = new Client(res.getString(R.string.algolia_app_id), res.getString(R.string.algolia_api_key));
 
 		setupDrawer();
@@ -219,7 +250,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		setupTransit();
 
 		setupRateDialog();
-
 	}
 
 	@Override
@@ -1426,7 +1456,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		return BitmapDescriptorFactory.fromBitmap(bitmap);
 	}
 
-
-
-
+	private void showConnectionError() {
+		new AlertDialog.Builder(new ContextThemeWrapper(MapsActivity.this, R.style.DialogTheme))
+				.setTitle(R.string.dialog_no_internet_title)
+				.setMessage(R.string.dialog_no_internet_message)
+				.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialogInterface, int i) {
+						android.os.Process.killProcess(android.os.Process.myPid());
+						System.exit(1);
+					}
+				})
+				.setCancelable(false)
+				.show();
+	}
 }

@@ -574,7 +574,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			@Override
 			public void requestCompleted(JSONObject result, AlgoliaException e) {
 				
-				if (e.getStatusCode() == 0) {
+				if (e != null && e.getStatusCode() == 0) {
 					runOnUiThread(new Runnable() {
 						@Override
 						public void run() {

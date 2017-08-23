@@ -16,7 +16,6 @@ import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -172,6 +171,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private EditText searchBox;
 	private ListView searchResults;
 	private RelativeLayout searchResultsOuter;
+	private AppCompatImageView algoliaLogo;
 
 	private ArrayList<JSONObject> lastSearch;
 
@@ -238,8 +238,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	}
 
 	private void initApp() {
-		algolia = new Client(res.getString(R.string.algolia_app_id), res.getString(R.string.algolia_api_key));
 
+		setupAlgolia();
 		setupDrawer();
 		setupMap();
 		setupInfoCard();
@@ -272,6 +272,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				setupLocationListener();
 			}
 		}
+	}
+
+	private void setupAlgolia() {
+		algolia = new Client(res.getString(R.string.algolia_app_id), res.getString(R.string.algolia_api_key));
+
+		algoliaLogo = (AppCompatImageView) findViewById(R.id.algoliaLogo);
+		algoliaLogo.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.algolia.com"));
+				startActivity(browserIntent);
+			}
+		});
 	}
 
 	private void setupDrawer() {

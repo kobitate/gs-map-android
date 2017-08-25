@@ -174,6 +174,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private AppCompatImageView algoliaLogo;
 
 	private ArrayList<JSONObject> lastSearch;
+	private ArrayList<String> lastSearchNames;
 
 	private Resources res;
 	private Polygon lastPolygon = null;
@@ -598,6 +599,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 					ArrayList<String[]> adapterResult = new ArrayList<>();
 					lastSearch = new ArrayList<>();
+					lastSearchNames = new ArrayList<>();
 
 					try {
 						JSONArray hits = result.getJSONArray("hits");
@@ -605,7 +607,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 							JSONObject b = hits.getJSONObject(i);
 							Polygon p = polygonsByBuildingID.get(b.getString("objectID"));
 
-							if (p != null) {
+							if (p != null && !lastSearchNames.contains(b.getString("name"))) {
 								if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
 									adapterResult.add(new String[]{
 											Html.fromHtml(b.getString("name"), Html.FROM_HTML_MODE_LEGACY).toString()
@@ -617,6 +619,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 									});
 								}
 								lastSearch.add(b);
+								lastSearchNames.add(b.getString("name"));
 							}
 
 						}

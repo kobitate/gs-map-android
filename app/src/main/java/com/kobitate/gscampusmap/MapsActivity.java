@@ -656,7 +656,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				if (searchQuery.length() == 0) {
 					searchResultsOuter.setVisibility(View.GONE);
 				} else {
-					search.searchAsync(new Query(searchQuery), searchCompletionHandler);
+					search.searchAsync(new Query(searchQuery).setOptionalWords("the"), searchCompletionHandler);
 				}
 			}
 		});
